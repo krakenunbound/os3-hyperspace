@@ -30,16 +30,18 @@ impl Dimension {
         dimension.viewport.pan_y = origin_offset.1;
 
         dimension.objects = vec![
-            SmartObject::note("Welcome to OS/3 Hyperspace", WorldPoint::new(120.0, 140.0))
-                .with_body("Scroll to zoom. Middle-drag or Space+drag to pan.\nDouble-click empty space to create a note.\nDrag corner handles on selection to resize."),
-            SmartObject::agent("Local Agent", WorldPoint::new(420.0, 160.0))
-                .with_body("AI runtime hooks land here. Local-first, always yours."),
-            SmartObject::app("Terminal", WorldPoint::new(760.0, 220.0))
-                .with_body("Future home of the Redox-compatible shell."),
-            SmartObject::folder("Projects", WorldPoint::new(260.0, 420.0))
-                .with_body("Hyperspace FS will mount dimensions as navigable space."),
-            SmartObject::new(ObjectKind::Link, "Link to Work", WorldPoint::new(620.0, 380.0))
-                .with_body("Click (future) or use inspector to target another dimension. Resize me!"),
+            SmartObject::note("Welcome to OS/3 Hyperspace", WorldPoint::new(80.0, 100.0))
+                .with_body("Scroll to zoom • Middle/Space-drag to pan • Drag corners to resize\nDouble-click empty to spawn Note • Click Link to jump dimensions\nPremium glass cards with window chrome on selected objects."),
+            SmartObject::agent("Local Agent", WorldPoint::new(380.0, 140.0))
+                .with_body("AI runtime hooks. Local-first, always yours.\nClick to invoke stub agent.\nGlows to show it's alive."),
+            SmartObject::app("Terminal", WorldPoint::new(720.0, 180.0))
+                .with_body("main@HYPERION-7X ~ %\nOS/3 Hyperspace 0.3.0 (Nebula)\n> help\n  zoom, pan, spawn, link, ai\n> _"),
+            SmartObject::folder("Projects", WorldPoint::new(220.0, 380.0))
+                .with_body("alpha-build/\ndesign-system/\nmodules/\n  kernel.os3\n  hyperspace.dll\n  README.md\n(Zoom in for details • Future: real contents)"),
+            SmartObject::new(ObjectKind::Link, "Link to Work", WorldPoint::new(580.0, 340.0))
+                .with_body("Portal to another dimension.\nSet target in Inspector • Click to navigate.\nRenders as glowing wormhole."),
+            SmartObject::app("System / About", WorldPoint::new(920.0, 420.0))
+                .with_body("OS/3 HYPERSPACE\nNebula 0.3.0\nHyperion Quantum 8-Core\nLocal-first • Infinite canvas\nBuilt for the AI era."),
         ];
 
         dimension

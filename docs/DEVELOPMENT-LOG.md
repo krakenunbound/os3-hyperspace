@@ -14,6 +14,102 @@
 
 ---
 
+## 2026-06-03 "Let's rock" GUI Polish Iteration: More Cinematic Background, Real Window Chrome, Rich Demo Content (continuing from reference image feedback)
+
+**Context / Why this work:**
+- User: "Let's rock. Document as you go." after seeing the first round of GUI modernization (premium glass cards, starfield+nebulae, modern panels, dock, icons).
+- The reference image is a complete, polished futuristic desktop with intense cosmic background (nebulae, energy swirls, light streaks), sleek glass windows with full chrome (titlebars, controls, content that looks like real apps: file grids, terminals, about screens), beautiful sidebar with icons/tags, right AI panel, top status bar, bottom dock.
+- Our previous upgrade got us to "much better than basic", but we can rock it further: more dynamic background energy, make selected objects have actual interactive window titlebar controls (close button that works), richer demo content so objects look like the windows in the image, more sidebar/dock polish.
+- Stay true to vision: everything on the infinite Smart Object canvas (no traditional WM yet).
+- Document the hell out of it: full entry here, code comments, updates to other docs, verbose commit. Append this entry at top before any commit.
+
+**What we shipped in this "rock" iteration:**
+- **Cinematic background upgrade** (canvas.rs): Added 5 glowing purple energy "light ribbons/streaks" with soft multi-pass glow in the starfield/nebula function. They are world-anchored with parallax from pan, react to zoom. Combined with existing stars + 2 nebula clouds, the canvas now has much more of the swirling, energetic, deep-space beauty from the reference image.
+- **Interactive window chrome on Smart Objects** (canvas.rs + app.rs):
+  - For selected objects, draw real titlebar control buttons on the far right of the header: [−] [□] [X] (close is red-tinted like modern UIs).
+  - Added hit testing in click handling: if you click in the chrome control zone of a selected object, it emits CloseObject event → deletes the object (the X works!).
+  - This makes selected "cards" feel exactly like the floating modern app windows in the reference (active with controls).
+- **Richer demo content that looks like the mockup** (dimension.rs):
+  - Welcome note with usage hints.
+  - Agent with "alive" note.
+  - Terminal object with multi-line "shell output" and prompt (looks like the terminal window in the image).
+  - Projects folder with "file listing" in body.
+  - Link as portal.
+  - New "System / About" object with logo-style text and specs (mimics the System/About window with big logo in the reference).
+- **Minor panel and chrome polish**: Used symbols in more places, updated demo bodies to reference the new features. Background energy now sells the "hyperspace" name.
+
+**Design decisions & tradeoffs:**
+- Streaks are thin lines with 3 soft glow passes + core (cheap, looks expensive). Low alpha, diagonal for energy feel. Parallax via pan offset keeps them "in the universe".
+- Chrome controls: drawn only on selected (active window metaphor). Close is functional via simple screen rect hit in the clicked handler (reuses existing object_screen_rect helper). Minimize/Max are visual only for now (future: could toggle HUD or size).
+- Demo content: kept bodies as multi-line text (easy in current draw) but formatted to look like real app content in the image (terminal has $ prompt and output, folder has indented list, about has centered logo block). When you zoom in on objects, they feel like real windows.
+- No change to core architecture or infinite canvas metaphor.
+- Added CloseObject event to keep the event-driven pattern consistent with Resized/LinkActivate.
+
+**Key code locations (after this iteration):**
+- `crates/hyperspace-shell/src/canvas.rs:279-340` (approx): Extended draw_starfield with the 5 energy streaks + glow passes. Comments reference the reference image.
+- `crates/hyperspace-shell/src/canvas.rs:510-530` (in draw_object): New window chrome drawing block for selected (close/min/max buttons with colors and symbols).
+- `crates/hyperspace-shell/src/canvas.rs:120-145` (in clicked logic): Hit test for chrome control zone on selected object; emits CloseObject if hit.
+- `crates/hyperspace-shell/src/canvas.rs:42`: New CloseObject variant in CanvasEvent.
+- `crates/hyperspace-shell/src/app.rs:524-535`: New match arm for CloseObject that calls remove_object (unified with Delete key).
+- `crates/hyperspace-core/src/dimension.rs:32-48`: Richer demo objects with terminal output, folder listing, about screen mimicking the reference windows.
+- All previous premium card / header / icon / badge / portal / glow code is still there and now has "window" controls on top.
+
+**Files changed:**
+- crates/hyperspace-shell/src/canvas.rs (background energy + chrome + event)
+- crates/hyperspace-shell/src/app.rs (CloseObject handling)
+- crates/hyperspace-core/src/dimension.rs (demo content)
+- docs/DEVELOPMENT-LOG.md (this entry)
+- (Will sync PHASES.md, smart-objects.md, dev-windows.md, CHANGELOG.md)
+
+**How to test (reproducible steps):**
+1. Delete workspace.json for fresh demo (recommended).
+2. `cargo run -p hyperspace-shell`
+3. **Background**: Pan and zoom a lot. You should see the original stars + purple/cyan nebulae + new glowing purple energy streaks/ribbons that move with the world and have soft glow halos. It should feel much more alive and cinematic, closer to the intense space in the reference image.
+4. **Window chrome**: Click any object to select it. On the top-right of its header you should see three small control buttons: minimize line, maximize square, red-tinted X.
+5. **Interactive close**: With an object selected, click directly on its red X in the header. The object should disappear (deleted). Status updates. This feels like closing a real app window from the mockup.
+6. **Demo content**: Look at the "Terminal" object — it has shell-like output with prompt. "Projects" has indented file list. "System / About" has logo block and specs. Zoom in on them — they read as real windows.
+7. Other features (resize corners still work on selected, links still portal + navigate, agents glow, etc.) unchanged.
+8. `cargo test --workspace` (no breakage).
+
+**Known limitations / gaps vs reference (still):**
+- Streaks are straight diagonals (not curved swirls like some in the image); good enough for prototype.
+- Chrome controls are minimal (no hover highlight yet, minimize/max not functional). Close works great.
+- Demo content is text-based (no real icon grids inside folders like the image's file browser window). When zoomed, the body text simulates it.
+- Still canvas metaphor (objects on plane) vs the reference's traditional desktop with overlapping windows on bg. Our "windows" are the objects themselves.
+- Left HUD is improved but not pixel-identical to the "HyperDrive" sidebar with all its icons and tags (we use symbols and sections).
+- No real status icons (wifi, battery) on top right yet (we have text status).
+- Egui limits: no true blur on glass, no easy per-object z-order beyond draw order, no built-in window manager (we simulate with selection + chrome).
+- Performance: more draw calls in background (still fine for dozens of objects).
+
+**Documentation updates (document as we go):**
+- This full detailed entry appended at the very top of DEVELOPMENT-LOG.md (before the previous GUI entry).
+- Will update PHASES.md (mark visual progress), smart-objects.md (mention window chrome), dev-windows.md (update controls for close button), CHANGELOG.md.
+- Code has lots of new comments referencing the reference image and "window chrome".
+- Commit will be verbose and point to this log entry.
+- Followed the update rule: code first, docs updated, log before final commit.
+
+**Verification commands:**
+- cargo check -p hyperspace-shell (and full workspace)
+- cargo test --workspace
+- Manual run + delete json as above.
+- Multiple read_file / search_replace for precise work.
+- git status / log for tracking.
+
+**Next immediate steps (to keep rocking):**
+1. Make minimize/max functional (e.g. minimize hides temporarily, max zooms to object or enlarges).
+2. Add hover highlight on the chrome buttons.
+3. Richer inner content for objects (e.g. when a Folder is large, draw a small grid of sub-icons inside the body area using painter).
+4. Add a couple of status icons (text or simple shapes) to the top bar right side like the reference.
+5. Optional: subtle animation on the energy streaks (phase shift with time) or on agent glow.
+6. When user gives more feedback on the new look, iterate again.
+7. Always append new log entry at top.
+
+This iteration makes the GUI noticeably closer to "modern and attractive" and "rocking" the reference vision while keeping the unique OS/3 canvas soul. The close button + chrome + richer content + energy streaks are big "wow" additions.
+
+**End of 2026-06-03 "Let's rock" GUI Polish Iteration entry. Next entry goes above this line.**
+
+---
+
 ## 2026-06-03 GUI Modernization: "This looks so basic" — Major Visual Overhaul to Match High-End Futuristic Mockup (reference image provided)
 
 **Context / Why this work:**

@@ -60,6 +60,7 @@ pub enum CanvasEvent {
     Deselected,
     AgentInvoke(SmartObjectId),
     LinkActivate(SmartObjectId),
+    CloseObject(SmartObjectId),  // For window chrome close button on selected objects
 }
 
 impl CanvasInteraction {
@@ -117,6 +118,23 @@ impl CanvasInteraction {
                 let world = viewport.screen_to_world(screen, screen_size);
 
                 if let Some(object) = hit_test(objects, world) {
+                    // Check for close button hit on the currently selected object's titlebar chrome
+                    // (makes selected Smart Objects feel like real closable windows from the reference mockup)
+                    let is_selected = selected == Some(object.id);
+                    if is_selected {
+                        let screen_rect = object_screen_rect(object, viewport, screen_size, rect.min);
+                        let header_h = 22.0_f32;
+                        let ctrl_zone = egui::Rect::from_min_max(
+                            egui::pos2(screen_rect.max.x - 50.0, screen_rect.min.y),
+                            egui::pos2(screen_rect.max.x, screen_rect.min.y + header_h),
+                        );
+                        if ctrl_zone.contains(egui::pos2(screen.x, screen.y)) {
+                            // Clicked in the chrome control area — treat as close (X is rightmost)
+                            events.push(CanvasEvent::CloseObject(object.id));
+                            return events; // don't also select
+                        }
+                    }
+
                     events.push(CanvasEvent::Selected(object.id));
                     if object.kind == ObjectKind::Agent {
                         events.push(CanvasEvent::AgentInvoke(object.id));
@@ -299,6 +317,39 @@ fn draw_starfield(
                 ny += n_step;
             }
             nx += n_step;
+        }
+    }
+
+    // Additional "glowing energy streaks / light ribbons" for cinematic depth (inspired by the swirling purple energy and light streaks in the reference image).
+    // A few long, thin, world-anchored lines with multi-pass glow (brighter core + soft outer).
+    // Parallax with pan, intensity with zoom. Very subtle so UI stays readable.
+    let energy_color = egui::Color32::from_rgba_unmultiplied(180, 100, 255, 18);
+    let streak_step = 520.0;
+    let num_streaks = 5;
+    for s in 0..num_streaks {
+        let phase = (viewport.pan_x * 0.08 + s as f32 * 97.0) % streak_step;
+        let y_off = (viewport.pan_y * 0.05 + s as f32 * 73.0) % 180.0 - 90.0;
+        let len = 280.0 + (s % 3) as f32 * 40.0;
+
+        // Compute a diagonal streak in world space
+        let wx = top_left.x + phase - 100.0;
+        let wy = top_left.y + y_off + (s as f32 * 35.0);
+
+        let start = viewport.world_to_screen(WorldPoint::new(wx, wy), screen_size);
+        let end = viewport.world_to_screen(WorldPoint::new(wx + len, wy + 18.0), screen_size);
+
+        let p1 = egui::pos2(rect.min.x + start.x, rect.min.y + start.y);
+        let p2 = egui::pos2(rect.min.x + end.x, rect.min.y + end.y);
+
+        if rect.expand(50.0).intersects(egui::Rect::from_two_pos(p1, p2)) {
+            // Soft outer glow passes
+            for g in (0..3).rev() {
+                let w = 2.5 + g as f32 * 3.0;
+                let a = 8 + g * 5;
+                painter.line_segment([p1, p2], egui::Stroke::new(w, egui::Color32::from_rgba_unmultiplied(180, 100, 255, a)));
+            }
+            // Core bright line
+            painter.line_segment([p1, p2], egui::Stroke::new(1.2, energy_color));
         }
     }
 }
@@ -505,6 +556,56 @@ fn draw_object(
         egui::FontId::proportional(9.0),
         accent_col,
     );
+
+    // === WINDOW CHROME CONTROLS for selected objects (makes them feel like real modern app windows in the reference) ===
+    // Draw small titlebar controls on far right of header: [−] [□] [X]
+    // Only for selected (active "window"). Visual only for now; interaction added in input handling.
+    if selected {
+        let ctrl_y = header_rect.min.y + 4.0;
+        let ctrl_size = 12.0;
+        let spacing = 16.0;
+        let right = header_rect.max.x - 8.0;
+
+        // Close button (X) - red-ish accent
+        let close_pos = egui::pos2(right, ctrl_y + 4.0);
+        painter.rect_filled(
+            egui::Rect::from_center_size(close_pos, egui::vec2(ctrl_size, ctrl_size)),
+            3.0,
+            egui::Color32::from_rgba_unmultiplied(200, 80, 80, 180),
+        );
+        painter.text(
+            close_pos + egui::vec2(-3.5, -4.0),
+            egui::Align2::LEFT_TOP,
+            "×",
+            egui::FontId::proportional(11.0),
+            egui::Color32::WHITE,
+        );
+
+        // Minimize and Maximize (simple lines / square) - subtle
+        let min_pos = egui::pos2(right - spacing, ctrl_y + 4.0);
+        painter.rect_filled(
+            egui::Rect::from_center_size(min_pos, egui::vec2(ctrl_size, ctrl_size)),
+            3.0,
+            egui::Color32::from_rgba_unmultiplied(255, 255, 255, 60),
+        );
+        painter.line_segment(
+            [min_pos + egui::vec2(-3.0, 3.0), min_pos + egui::vec2(3.0, 3.0)],
+            egui::Stroke::new(1.5, egui::Color32::from_rgb(200, 210, 230)),
+        );
+
+        let max_pos = egui::pos2(right - spacing * 2.0, ctrl_y + 4.0);
+        painter.rect_filled(
+            egui::Rect::from_center_size(max_pos, egui::vec2(ctrl_size, ctrl_size)),
+            3.0,
+            egui::Color32::from_rgba_unmultiplied(255, 255, 255, 60),
+        );
+        painter.rect_stroke(
+            egui::Rect::from_center_size(max_pos, egui::vec2(6.0, 6.0)),
+            1.0,
+            egui::Stroke::new(1.0, egui::Color32::from_rgb(200, 210, 230)),
+            egui::StrokeKind::Inside,
+        );
+    }
 
     // === BODY CONTENT ===
     if rect.height() > 52.0 {

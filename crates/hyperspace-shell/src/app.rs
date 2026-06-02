@@ -444,6 +444,7 @@ impl eframe::App for HyperspaceApp {
 
             let mut pending_agent_prompt: Option<String> = None;
             let mut pending_link_nav: Option<DimensionId> = None;
+            let mut pending_close: Option<SmartObjectId> = None;
             let mut moved_ids: Vec<(SmartObjectId, WorldPoint)> = Vec::new();
             let mut new_objects: Vec<SmartObject> = Vec::new();
             let mut selected_object = self.selected_object;
@@ -521,6 +522,12 @@ impl eframe::App for HyperspaceApp {
                                 }
                             }
                         }
+                        CanvasEvent::CloseObject(id) => {
+                            // Close button on selected object's titlebar chrome was clicked.
+                            // Defer to avoid borrow conflict with active_dimension_mut (like LinkActivate).
+                            pending_close = Some(id);
+                            status_update = Some("Closing object...".into());
+                        }
                     }
                 }
 
@@ -589,6 +596,16 @@ impl eframe::App for HyperspaceApp {
             if let Some(target) = pending_link_nav {
                 // Now safe to call switch (no active dim mut borrow)
                 self.switch_dimension(target);
+            }
+
+            if let Some(id) = pending_close {
+                // Safe to mutate state now
+                if self.state.remove_object(self.active_dimension_id(), id) {
+                    self.selected_object = None;
+                    self.status = "Closed object".into();
+                    self.mark_dirty();
+                    self.sync_active_dimension();
+                }
             }
         });
     }

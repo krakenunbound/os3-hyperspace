@@ -66,12 +66,13 @@ First build downloads dependencies (~430 crates); subsequent builds are fast.
 | Double-click (empty) | Create Note at cursor (always Note; Link kind not double-click creatable today) |
 | Drag object | Move (snaps to 20px grid) |
 | Drag corner handles (selected) | Resize object (snaps size to grid on release) |
-| Canvas background | Dynamic starfield (layered, zoom/pan reactive for hyperspace depth/immersion) |
-| Click object | Select → Inspector opens (all kinds including Link) |
+| Canvas background | Dynamic starfield + nebulae + glowing energy streaks (layered, zoom/pan reactive for hyperspace depth/immersion) |
+| Click object | Select → Inspector opens (all kinds including Link). Selected shows window chrome in header. |
 | Click Agent | Select + invoke stub agent |
 | Click Link | Select + if target set, navigate to that dimension (Link renders as glowing portal) |
 | Click Agent | Select + invoke stub; Agent renders with neural glow for "liveness" |
 | Click empty canvas | Deselect |
+| Click close button (X on selected header) | Delete the object (real window control feel) |
 
 ### Keyboard
 

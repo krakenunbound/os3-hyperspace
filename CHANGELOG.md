@@ -36,6 +36,12 @@ See [docs/DEVELOPMENT-LOG.md](docs/DEVELOPMENT-LOG.md) for *exhaustive* session-
   - Subtler futuristic grid + glass-themed minimap/overlay.
   - All changes dramatically improve "modern and attractive" feel while preserving the core infinite canvas + Smart Objects vision.
 
+- **"Let's rock" GUI Polish follow-up** (see docs/DEVELOPMENT-LOG.md top "Let's rock" entry):
+  - Cinematic background: added 5 glowing purple energy light ribbons/streaks with soft multi-pass glow + parallax. Combined with stars + nebulae for intense space energy matching the reference image.
+  - Interactive window titlebar chrome on selected Smart Objects: drawn [−] [□] [X] controls (close is red-tinted). Clicking the X area now deletes the object (real close button behavior).
+  - Richer demo content in objects so they look like the windows in the reference: Terminal with shell output + prompt, Projects with file listing, new System/About with logo block and specs, updated Welcome note.
+  - Updated docs and log with full details.
+
 ### Changed
 - Canvas input now prioritizes resize handles on selected objects before object dragging.
 - Event system extended: `CanvasEvent::Resized` and `CanvasEvent::LinkActivate`.

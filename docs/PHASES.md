@@ -59,7 +59,7 @@ This is the source of truth for project progress (Phases 0–4 with status table
 | Grid snap | ✅ Done | 20px world grid |
 | Minimap | ✅ Done | Bottom-right overview |
 | Persistent layout | ✅ Done | Auto-load/save JSON |
-| Canvas immersion & object liveness visuals | ✅ Major step | Deep space theme, layered starfield + nebulae, premium glassmorphic Smart Object cards with icons/badges/shadows/glows, portal Links, glowing Agents, modern top bar + HUDs + bottom dock (see DEVELOPMENT-LOG 2026-06-03 GUI Modernization entry + reference image). Still more polish possible. |
+| Canvas immersion & object liveness visuals | ✅ Major step + polish | Deep space theme, layered starfield + nebulae + glowing energy streaks, premium glassmorphic cards with icons/badges/shadows/glows + interactive window chrome (close button works on selected), richer demo content (terminal, about, folders), modern top bar/HUDs/dock (see DEVELOPMENT-LOG "Let's rock" entry + user reference image). Still more polish possible. |
 | Native Redox orbital shell | ⬜ Todo | Replace eframe/egui layer |
 | Object linking across dimensions | 🟡 Partial | `Link` kind + link_target + HUD spawn + Inspector picker + click-to-navigate + demo prewire + persistence. Polish (arrows, object targets, feedback) todo. See [smart-objects.md](smart-objects.md) |
 | Resize Smart Objects | ✅ Done | Drag corner handles on selection (live + snap); Inspector size DragValues; min sizes, works on all kinds incl Links |
