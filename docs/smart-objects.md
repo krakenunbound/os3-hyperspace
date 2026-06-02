@@ -2,8 +2,8 @@
 
 Smart Objects are typed entities on the Hyperspace canvas. They are first-class citizens — not just files, windows, or icons.
 
-**Implementation:** `crates/hyperspace-core/src/object.rs` (kinds + `SmartObject` incl. `Link`)  
-**Rendering & interaction (desktop prototype):** `crates/hyperspace-shell/src/canvas.rs`, `app.rs` (basic creation, move, inspector; double-click always spawns Note; HUD spawn omits Link today)
+**Implementation:** `crates/hyperspace-core/src/object.rs` (kinds + `SmartObject` incl. `link_target`)  
+**Rendering & interaction (desktop prototype):** `crates/hyperspace-shell/src/canvas.rs` (full resize + LinkActivate), `app.rs` (inspector + events + spawn + pending nav)
 
 ---
 
@@ -15,7 +15,7 @@ Smart Objects are typed entities on the Hyperspace canvas. They are first-class 
 | **App** | Blue | 240×160 | Launches or embeds applications (future) |
 | **Folder** | Green | 220×140 | Maps to Hyperspace FS paths (future) |
 | **Agent** | Purple | 260×190 | Local-first AI agent entry point |
-| **Link** | Red | 200×120 | Cross-dimension or external links (next target; kind defined + partial UI support today) |
+| **Link** | Red | 200×120 | Cross-dimension links (basic: target, spawn, inspector setter, click-nav, demo prewire; see impl notes below) |
 
 Each object has:
 

@@ -17,7 +17,7 @@ Built on [Redox OS](https://www.redox-os.org/) (Rust microkernel) for maximum st
 |-------|-------|--------|
 | **0** | Setup + desktop prototype | ✅ Prototype running on Windows; Redox VM + forks pending |
 | **1** | Core services + Redox foundation | 🟡 JSON persistence + AI stub done; Redox / local inference pending |
-| **2** | Shell MVP | 🟡 Early features done (canvas, dims, Smart Objects, inspector, grid, minimap, persist); object linking + resize + native Redox pending |
+| **2** | Shell MVP | 🟡 Resize handles + basic Link navigation landed (see docs/DEVELOPMENT-LOG.md + PHASES.md); more polish + native Redox pending |
 | **3+** | Compatibility, polish, release | ⚪ Not started |
 
 Full tracker: **[docs/PHASES.md](docs/PHASES.md)**

@@ -1,3 +1,22 @@
+//! Canvas rendering and input handling for the Hyperspace shell prototype.
+//!
+//! This module owns the infinite zoomable 2D world:
+//! - Pan/zoom via Viewport math (see hyperspace-core).
+//! - Object hit testing, move, and (new) resize via corner handles.
+//! - Special interactions: double-click spawn (Notes), Agent clicks, Link activation.
+//! - Drawing: grid, objects (with accent headers), selected resize handles, minimap, status overlay.
+//!
+//! Key recent additions (2026-06-03):
+//! - Resize support: ResizeCorner, resizing state, hit_resize_handle, compute_resized,
+//!   draw_resize_handles, Resized event.
+//! - Link activation: LinkActivate event emitted on click for Link-kind objects.
+//! - Shared helpers (object_screen_rect) to keep screen<->world consistent.
+//!
+//! The app (app.rs) drives the state machine: it passes `selected`, receives events,
+//! applies snaps/dirty/persistence, and renders via draw_canvas.
+//!
+//! See docs/DEVELOPMENT-LOG.md and docs/smart-objects.md for full rationale + usage.
+
 use eframe::egui;
 use hyperspace_core::{
     Dimension, ObjectKind, SmartObject, SmartObjectId, Viewport, WorldPoint, WorldSize,
@@ -11,7 +30,8 @@ pub struct CanvasInteraction {
     resizing: Option<(SmartObjectId, ResizeCorner, WorldPoint, WorldPoint, WorldSize)>, // (id, corner, start_pointer_world, start_pos, start_size)
 }
 
-/// Which corner is being dragged for resize. Opposite corner stays fixed.
+/// Which corner is being dragged for resize. Opposite corner (or edge) stays fixed.
+/// Used internally by CanvasInteraction for resize state machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ResizeCorner {
     TopLeft,
@@ -340,7 +360,9 @@ fn draw_object(
     }
 }
 
-/// Draw 4 corner resize handles (small squares) when object is selected. Screen-pixel sized.
+/// Draw 4 corner resize handles (small white squares with stroke) when object is selected.
+/// Called from draw_canvas only for the selected object. Handles are fixed screen size (~7px)
+/// so they remain usable at any zoom level. Early-returns for tiny objects.
 fn draw_resize_handles(
     painter: &egui::Painter,
     object: &SmartObject,
@@ -456,6 +478,8 @@ fn draw_overlay(painter: &egui::Painter, rect: egui::Rect, viewport: Viewport, n
 }
 
 /// Compute screen rect (in painter local coords) for an object.
+/// Shared helper used by draw_object, draw_resize_handles, hit_resize_handle, and input logic.
+/// Keeps screen math in one place so zoom/pan changes are consistent.
 fn object_screen_rect(
     object: &SmartObject,
     viewport: &Viewport,
@@ -476,7 +500,10 @@ fn object_screen_rect(
     )
 }
 
-/// Hit test for resize handles on a selected object's screen rect. Returns the corner if pointer (screen local) hits a handle.
+/// Hit test for resize handles on a selected object's screen rect.
+/// Returns the corner if pointer (in screen local coords, relative to canvas origin) hits a handle.
+/// Uses generous 12px screen-pixel handles (zoom-independent) for usability.
+/// Called only for the currently selected object (passed from app).
 fn hit_resize_handle(
     object: &SmartObject,
     pointer_screen: WorldPoint,
@@ -508,7 +535,10 @@ fn hit_resize_handle(
     None
 }
 
-/// Given drag, compute new (position, size) for the corner being resized. Clamps to min dim. Does not snap here.
+/// Given a drag, compute new (position, size) for the corner being dragged.
+/// Clamps resulting dimensions to MIN_OBJECT_DIM. Does *not* snap here
+/// (snapping + dirty marking happens in app.rs when processing the emitted Resized event).
+/// Supports all four corners by adjusting the "fixed" corner implicitly via deltas.
 fn compute_resized(
     corner: ResizeCorner,
     start_pointer: WorldPoint,

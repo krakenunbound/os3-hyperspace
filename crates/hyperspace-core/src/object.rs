@@ -44,7 +44,13 @@ pub struct SmartObject {
     pub body: String,
     pub position: WorldPoint,
     pub size: WorldSize,
-    /// For Link kind: the DimensionId (as Uuid) to navigate to when activated.
+
+    /// For Link kind: the target DimensionId (stored as Uuid via the SmartObjectId alias).
+    ///
+    /// Set via Inspector in the shell prototype. Used by app.rs for click-to-navigate.
+    /// Optional + skipped in serde when None for persistence compatibility with older saves.
+    /// See docs/smart-objects.md and docs/DEVELOPMENT-LOG.md (2026-06-03) for design notes.
+    /// Future: may become a richer LinkTarget enum (cross-object, URL, etc.).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link_target: Option<SmartObjectId>,
 }

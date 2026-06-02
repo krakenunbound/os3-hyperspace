@@ -23,7 +23,9 @@ impl HyperspaceState {
     pub fn with_demo_content() -> Self {
         let mut home = Dimension::demo("Home", (0.0, 0.0));
         let work = Dimension::demo("Work", (1200.0, -400.0));
-        // Wire the demo Link (if present) to target the Work dimension
+        // Wire the demo Link (if present) to target the Work dimension.
+        // This exercises the new link_target field + navigation on first run.
+        // See docs/DEVELOPMENT-LOG.md and dimension.rs demo for details.
         if let Some(link) = home.objects.iter_mut().find(|o| o.kind == ObjectKind::Link) {
             link.link_target = Some(work.id);
         }

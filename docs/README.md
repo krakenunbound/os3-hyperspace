@@ -28,6 +28,7 @@ Current: Phase 0 (prototype running) with early Phase 2 shell features done.
 | [../README.md](../README.md) | Status table, doc links, update convention |
 | [../ARCHITECTURE.md](../ARCHITECTURE.md) | Target vs. current layers, crate map, data flow |
 | [../TODO.md](../TODO.md) | Short checklist linking to phase + concept docs |
+| [DEVELOPMENT-LOG.md](DEVELOPMENT-LOG.md) | **Exhaustive session log** — dated entries with impl details, file:line pointers, decisions/tradeoffs, exact test steps, known limitations, how to pick up work. Read first when resuming. |
 | [dev-windows.md](dev-windows.md) | UI layout diagram, full controls, troubleshooting (Windows prototype) |
 
 ## Conventions going forward

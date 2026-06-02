@@ -72,7 +72,7 @@ Independent zoomable workspaces with their own viewport and objects. Users switc
 
 ### Smart Objects
 
-Typed canvas entities: Note, App, Folder, Agent, Link. Serialized inside each dimension. Current: basic Link kind supported in types/inspector. Future/next: App launches, Folder mounts, Link crosses dimensions (documented target).
+Typed canvas entities: Note, App, Folder, Agent, Link (with optional link_target). Serialized inside each dimension. Current (2026-06): resize handles on all (canvas drag + inspector), basic Link cross-dim nav (target picker, click activate, demo prewire, persistence). See docs/DEVELOPMENT-LOG.md and smart-objects.md. Future: richer links, App/Folder behaviors, Redox native.
 
 ### Viewport
 

@@ -1,3 +1,20 @@
+//! Main application state and egui UI wiring for the Hyperspace shell.
+//!
+//! HyperspaceApp owns:
+//! - HyperspaceState (dimensions + active + objects) + persistence (JsonWorkspaceStore).
+//! - In-memory ObjectStore sync.
+//! - Agent runtime (stub today).
+//! - CanvasInteraction (input + events for pan/zoom/move/resize/Link).
+//! - UI panels: top bar (dims + save), left HUD (controls + spawn + AI + FS), right inspector, central canvas.
+//!
+//! Recent 2026-06-03 changes documented here and in canvas.rs + DEVELOPMENT-LOG.md:
+//! - Size editing + resize event handling (with GRID_SNAP).
+//! - Link target setting UI + deferred navigation (pending_link_nav to dodge active_dimension_mut borrow).
+//! - Spawn now includes Link; Link click handling.
+//! - Pre-collection of other_dims before mutable borrows in inspector.
+//!
+//! See docs/ for full feature docs. Run with `cargo run -p hyperspace-shell`.
+
 use eframe::egui;
 use hyperspace_core::{
     DimensionId, HyperspaceState, ObjectKind, SmartObject, SmartObjectId, WorldPoint, WorldSize,
