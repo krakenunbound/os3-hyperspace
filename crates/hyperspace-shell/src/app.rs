@@ -211,6 +211,7 @@ impl HyperspaceApp {
                 ui.label("Space + drag — pan canvas");
                 ui.label("Double-click — new note");
                 ui.label("Drag object — move (snaps to grid)");
+                ui.label("Drag corner handles (on selection) — resize");
                 ui.label("Delete — remove selection");
                 ui.label("Ctrl+S — save workspace");
                 ui.separator();
@@ -222,6 +223,7 @@ impl HyperspaceApp {
                         ObjectKind::App,
                         ObjectKind::Folder,
                         ObjectKind::Agent,
+                        ObjectKind::Link,
                     ] {
                         if ui.button(kind.label()).clicked() {
                             self.spawn_object(kind, WorldPoint::new(0.0, 0.0));
@@ -279,6 +281,15 @@ impl HyperspaceApp {
         let mut delete_requested = false;
         let mut changed = false;
 
+        // Collect other dims for Link targeting (before mutable borrow of object)
+        let other_dims: Vec<(DimensionId, String)> = self
+            .state
+            .dimensions
+            .iter()
+            .filter(|d| d.id != self.state.active_dimension)
+            .map(|d| (d.id, d.name.clone()))
+            .collect();
+
         egui::SidePanel::right("inspector")
             .resizable(true)
             .default_width(280.0)
@@ -292,6 +303,22 @@ impl HyperspaceApp {
 
                 ui.label(format!("Type: {}", object.kind.label()));
                 ui.separator();
+
+                if object.kind == ObjectKind::Link {
+                    ui.label("Link Target (click to set):");
+                    for (tid, tname) in &other_dims {
+                        let is_set = object.link_target == Some(*tid);
+                        if ui.selectable_label(is_set, tname).clicked() {
+                            object.link_target = Some(*tid);
+                            changed = true;
+                        }
+                    }
+                    if ui.button("Clear link target").clicked() {
+                        object.link_target = None;
+                        changed = true;
+                    }
+                    ui.separator();
+                }
 
                 changed |= ui
                     .text_edit_singleline(&mut object.title)
@@ -309,10 +336,34 @@ impl HyperspaceApp {
                     "Position: ({:.0}, {:.0})",
                     object.position.x, object.position.y
                 ));
-                ui.label(format!(
-                    "Size: {:.0} × {:.0}",
-                    object.size.width, object.size.height
-                ));
+
+                // Editable size (for resize + direct entry)
+                ui.horizontal(|ui| {
+                    ui.label("Size:");
+                    let mut w = object.size.width;
+                    let mut h = object.size.height;
+                    let w_changed = ui
+                        .add(
+                            egui::DragValue::new(&mut w)
+                                .speed(2.0)
+                                .range(50.0..=4000.0)
+                                .suffix(" w"),
+                        )
+                        .changed();
+                    let h_changed = ui
+                        .add(
+                            egui::DragValue::new(&mut h)
+                                .speed(2.0)
+                                .range(50.0..=4000.0)
+                                .suffix(" h"),
+                        )
+                        .changed();
+                    if w_changed || h_changed {
+                        object.size.width = w.max(50.0);
+                        object.size.height = h.max(50.0);
+                        changed = true;
+                    }
+                });
 
                 if ui.button("Delete object").clicked() {
                     delete_requested = true;
@@ -344,6 +395,7 @@ impl eframe::App for HyperspaceApp {
             };
 
             let mut pending_agent_prompt: Option<String> = None;
+            let mut pending_link_nav: Option<DimensionId> = None;
             let mut moved_ids: Vec<(SmartObjectId, WorldPoint)> = Vec::new();
             let mut new_objects: Vec<SmartObject> = Vec::new();
             let mut selected_object = self.selected_object;
@@ -356,6 +408,7 @@ impl eframe::App for HyperspaceApp {
                     &mut dimension.viewport,
                     &mut dimension.objects,
                     screen_size,
+                    selected_object, // pass for resize handle priority on selected
                 );
 
                 for event in events {
@@ -378,6 +431,18 @@ impl eframe::App for HyperspaceApp {
                         CanvasEvent::Moved { id, to } => {
                             moved_ids.push((id, snap_point(to)));
                         }
+                        CanvasEvent::Resized { id, position, size } => {
+                            // App will apply snap + update; we may have live mutated in canvas for feel
+                            // Collect or apply similar to move. For simplicity apply here with snap.
+                            if let Some(obj) = dimension.objects.iter_mut().find(|o| o.id == id) {
+                                obj.position = snap_point(position);
+                                // Snap size lightly to grid for nice alignment (optional)
+                                obj.size.width = ((size.width / GRID_SNAP).round() * GRID_SNAP).max(50.0);
+                                obj.size.height = ((size.height / GRID_SNAP).round() * GRID_SNAP).max(50.0);
+                                status_update = Some(format!("Resized {}", obj.title));
+                                dirty = true;
+                            }
+                        }
                         CanvasEvent::Selected(id) => {
                             selected_object = Some(id);
                             if let Some(object) = dimension.objects.iter().find(|o| o.id == id) {
@@ -394,6 +459,18 @@ impl eframe::App for HyperspaceApp {
                                     "You are a local-first agent inside OS/3 Hyperspace. Respond briefly about object '{}'.",
                                     object.title
                                 ));
+                            }
+                        }
+                        CanvasEvent::LinkActivate(id) => {
+                            selected_object = Some(id);
+                            if let Some(object) = dimension.objects.iter().find(|o| o.id == id) {
+                                if let Some(target) = object.link_target {
+                                    // Defer to after the dimension borrow ends (avoid E0499/E0502)
+                                    pending_link_nav = Some(target);
+                                    status_update = Some(format!("Navigating via Link: {}", object.title));
+                                } else {
+                                    status_update = Some("Link has no target set (use Inspector)".into());
+                                }
                             }
                         }
                     }
@@ -426,6 +503,11 @@ impl eframe::App for HyperspaceApp {
                     Ok(reply) => self.status = reply.text,
                     Err(err) => self.status = err.to_string(),
                 }
+            }
+
+            if let Some(target) = pending_link_nav {
+                // Now safe to call switch (no active dim mut borrow)
+                self.switch_dimension(target);
             }
         });
     }

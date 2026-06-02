@@ -21,8 +21,12 @@ pub struct HyperspaceState {
 
 impl HyperspaceState {
     pub fn with_demo_content() -> Self {
-        let home = Dimension::demo("Home", (0.0, 0.0));
+        let mut home = Dimension::demo("Home", (0.0, 0.0));
         let work = Dimension::demo("Work", (1200.0, -400.0));
+        // Wire the demo Link (if present) to target the Work dimension
+        if let Some(link) = home.objects.iter_mut().find(|o| o.kind == ObjectKind::Link) {
+            link.link_target = Some(work.id);
+        }
         let active_dimension = home.id;
         Self {
             dimensions: vec![home, work],

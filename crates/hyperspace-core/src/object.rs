@@ -44,6 +44,9 @@ pub struct SmartObject {
     pub body: String,
     pub position: WorldPoint,
     pub size: WorldSize,
+    /// For Link kind: the DimensionId (as Uuid) to navigate to when activated.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link_target: Option<SmartObjectId>,
 }
 
 impl SmartObject {
@@ -55,6 +58,7 @@ impl SmartObject {
             body: String::new(),
             position,
             size: default_size(kind),
+            link_target: None,
         }
     }
 

@@ -2,7 +2,7 @@
 
 **Current phase:** Phase 0 (prototype running) with early Phase 2 shell features done.
 
-**Last updated:** 2026-04-10
+**Last updated:** 2026-06-03 (post resize + basic linking)
 
 This is the source of truth for project progress (Phases 0–4 with status tables ✅ / ⬜, exit criteria, and suggested build order). [TODO.md](../TODO.md) is a short mirror of this file. See [README.md](README.md) (in docs/) for the documentation index.
 
@@ -60,8 +60,8 @@ This is the source of truth for project progress (Phases 0–4 with status table
 | Minimap | ✅ Done | Bottom-right overview |
 | Persistent layout | ✅ Done | Auto-load/save JSON |
 | Native Redox orbital shell | ⬜ Todo | Replace eframe/egui layer |
-| Object linking across dimensions | ⬜ Todo | `Link` kind + cross-dim navigation — see [smart-objects.md](smart-objects.md) |
-| Resize Smart Objects | ⬜ Todo | Drag handles on selection |
+| Object linking across dimensions | 🟡 Partial | `Link` kind + link_target + HUD spawn + Inspector picker + click-to-navigate + demo prewire + persistence. Polish (arrows, object targets, feedback) todo. See [smart-objects.md](smart-objects.md) |
+| Resize Smart Objects | ✅ Done | Drag corner handles on selection (live + snap); Inspector size DragValues; min sizes, works on all kinds incl Links |
 
 **Exit criteria:** Same UX on Redox as desktop prototype; layouts portable between both.
 
@@ -100,11 +100,11 @@ This is the source of truth for project progress (Phases 0–4 with status table
 
 ## What to build next (suggested order)
 
-Next documented targets:
+Next documented targets (resize + basic linking landed):
 
-1. Object linking across dimensions (`Link` Smart Objects) — see [smart-objects.md](smart-objects.md)
+1. Polish object linking (visual links/arrows, richer targets like objects/URLs, activation UX) — see [smart-objects.md](smart-objects.md)
 2. Redox VM + fork plan ([redox-roadmap.md](redox-roadmap.md))
-3. Resize handles for Smart Objects
-4. Local inference behind `AgentRuntime` — see [ai-runtime.md](ai-runtime.md)
+3. Local inference behind `AgentRuntime` — see [ai-runtime.md](ai-runtime.md)
+4. Deeper Smart Object behaviors, theme/a11y, more canvas polish
 
-(These drive the Phase 0 exit + Phase 1/2 progress.)
+(These drive the Phase 0 exit + Phase 1/2 progress. See updated dev-windows.md for current controls.)

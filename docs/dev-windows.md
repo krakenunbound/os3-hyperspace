@@ -4,7 +4,9 @@ Run and iterate on the shell prototype while Redox integration is in progress.
 
 **Related:** [PHASES.md](PHASES.md) · [smart-objects.md](smart-objects.md) · [persistence.md](persistence.md) · [redox-roadmap.md](redox-roadmap.md)
 
-Next targets documented: object linking, Redox VM, resize handles, local inference.
+Implemented in this build: resize handles (canvas + inspector), basic Link navigation + target setting in inspector, demo Link prewired, accent header polish on objects.
+
+Still documented targets: full object linking polish, Redox VM, local inference.
 
 ---
 
@@ -60,9 +62,11 @@ First build downloads dependencies (~430 crates); subsequent builds are fast.
 | Middle-drag | Pan |
 | Space + drag | Pan |
 | Double-click (empty) | Create Note at cursor (always Note; Link kind not double-click creatable today) |
-| Drag object | Move (snaps to 20px grid). Resize handles: not yet implemented (next target) |
+| Drag object | Move (snaps to 20px grid) |
+| Drag corner handles (selected) | Resize object (snaps size to grid on release) |
 | Click object | Select → Inspector opens (all kinds including Link) |
 | Click Agent | Select + invoke stub agent |
+| Click Link | Select + if target set, navigate to that dimension |
 | Click empty canvas | Deselect |
 
 ### Keyboard
@@ -85,14 +89,15 @@ First build downloads dependencies (~430 crates); subsequent builds are fast.
 
 ### Left HUD
 
-- **Spawn** — create Note, App, Folder, or Agent at origin (Link kind exists in core but not in HUD spawn buttons yet)
+- **Spawn** — create Note, App, Folder, Agent, or Link at origin
 - **AI Runtime** — ping stub agent or ask about active dimension
 - **Hyperspace FS** — sync in-memory store, show object count
 
 ### Inspector (right, when selected)
 
 - Edit title and body
-- View position/size
+- Edit size (or drag handles on canvas)
+- For **Link**: choose target dimension from other dims (or clear)
 - **Delete object**
 
 ---

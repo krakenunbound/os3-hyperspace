@@ -33,11 +33,13 @@ Each object has:
 |--------|--------|
 | Click object | Select; opens **Inspector** (right panel) |
 | Click Agent | Select + invoke stub AI runtime |
+| Click Link | Select + if target set, cross-dimension navigation |
 | Click empty canvas | Deselect |
 | Drag object | Move; snaps to 20px grid |
+| Drag corner (selected) | Resize; snaps size lightly to grid |
 | Double-click empty canvas | Spawn new **Note** at cursor |
-| Spawn buttons (left HUD) | Create object at world origin (0, 0) |
-| Inspector edits | Update title/body; marks workspace dirty |
+| Spawn buttons (left HUD) | Create object at world origin (0, 0) — now includes Link |
+| Inspector edits | Update title/body/size; for Link set target dim; marks workspace dirty |
 | Delete key | Remove selected object (when not typing) |
 | Delete button (Inspector) | Remove selected object |
 
@@ -63,11 +65,11 @@ Selected objects render with a white border and brighter fill.
 - Runs inference locally via `hyperspace-ai` (no cloud required)
 - Can act on other Smart Objects in the same dimension
 
-### Link (next documented target)
+### Link
 
-- Points to another dimension, object, or URL
-- Click navigates or opens target
-- Current: `ObjectKind::Link` exists in core and can be created via code paths / inspector; no cross-dimension navigation, no special Link UI, no spawn button in left HUD yet (see [PHASES.md](PHASES.md) Phase 2 todo and "What to build next")
+- Points to another dimension (or future object/URL)
+- Click navigates/activates when target set
+- Basic cross-dim linking implemented (target picker in Inspector, HUD spawn, click-to-nav if set, demo pre-linked example, stored in persistence). Polish (link visuals/arrows, richer targets) remains.
 
 ---
 

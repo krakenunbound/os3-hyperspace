@@ -8,7 +8,19 @@ pub struct CanvasInteraction {
     dragging_object: Option<SmartObjectId>,
     drag_offset: Option<WorldPoint>,
     space_pan: bool,
+    resizing: Option<(SmartObjectId, ResizeCorner, WorldPoint, WorldPoint, WorldSize)>, // (id, corner, start_pointer_world, start_pos, start_size)
 }
+
+/// Which corner is being dragged for resize. Opposite corner stays fixed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ResizeCorner {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+const MIN_OBJECT_DIM: f32 = 50.0;
 
 pub enum CanvasEvent {
     Created {
@@ -19,9 +31,15 @@ pub enum CanvasEvent {
         id: SmartObjectId,
         to: WorldPoint,
     },
+    Resized {
+        id: SmartObjectId,
+        position: WorldPoint,
+        size: WorldSize,
+    },
     Selected(SmartObjectId),
     Deselected,
     AgentInvoke(SmartObjectId),
+    LinkActivate(SmartObjectId),
 }
 
 impl CanvasInteraction {
@@ -31,6 +49,7 @@ impl CanvasInteraction {
         viewport: &mut Viewport,
         objects: &mut [SmartObject],
         screen_size: WorldSize,
+        selected: Option<SmartObjectId>,
     ) -> Vec<CanvasEvent> {
         let mut events = Vec::new();
         let rect = ui.max_rect();
@@ -78,11 +97,11 @@ impl CanvasInteraction {
                 let world = viewport.screen_to_world(screen, screen_size);
 
                 if let Some(object) = hit_test(objects, world) {
+                    events.push(CanvasEvent::Selected(object.id));
                     if object.kind == ObjectKind::Agent {
-                        events.push(CanvasEvent::Selected(object.id));
                         events.push(CanvasEvent::AgentInvoke(object.id));
-                    } else {
-                        events.push(CanvasEvent::Selected(object.id));
+                    } else if object.kind == ObjectKind::Link {
+                        events.push(CanvasEvent::LinkActivate(object.id));
                     }
                 } else {
                     events.push(CanvasEvent::Deselected);
@@ -94,7 +113,31 @@ impl CanvasInteraction {
             if let Some(pointer) = response.interact_pointer_pos() {
                 let screen = WorldPoint::new(pointer.x - rect.min.x, pointer.y - rect.min.y);
                 let world = viewport.screen_to_world(screen, screen_size);
-                if let Some(object) = hit_test(objects, world) {
+
+                // Priority: resize handles on the currently selected object
+                if let Some(sel_id) = selected {
+                    if let Some(obj) = objects.iter().find(|o| o.id == sel_id) {
+                        if let Some(corner) = hit_resize_handle(obj, screen, viewport, screen_size, rect.min) {
+                            self.resizing = Some((
+                                sel_id,
+                                corner,
+                                world,
+                                obj.position,
+                                obj.size,
+                            ));
+                            events.push(CanvasEvent::Selected(sel_id));
+                            // do not fall through to move
+                            // continue to next input handling
+                        } else if let Some(object) = hit_test(objects, world) {
+                            self.dragging_object = Some(object.id);
+                            self.drag_offset = Some(WorldPoint::new(
+                                world.x - object.position.x,
+                                world.y - object.position.y,
+                            ));
+                            events.push(CanvasEvent::Selected(object.id));
+                        }
+                    }
+                } else if let Some(object) = hit_test(objects, world) {
                     self.dragging_object = Some(object.id);
                     self.drag_offset = Some(WorldPoint::new(
                         world.x - object.position.x,
@@ -106,7 +149,21 @@ impl CanvasInteraction {
         }
 
         if response.dragged_by(egui::PointerButton::Primary) && !self.space_pan {
-            if let Some(id) = self.dragging_object {
+            if let Some((id, corner, start_ptr, start_pos, start_sz)) = self.resizing {
+                if let Some(pointer) = response.interact_pointer_pos() {
+                    let screen = WorldPoint::new(pointer.x - rect.min.x, pointer.y - rect.min.y);
+                    let cur_world = viewport.screen_to_world(screen, screen_size);
+                    let (new_pos, new_size) =
+                        compute_resized(corner, start_ptr, start_pos, start_sz, cur_world);
+
+                    // Emit; app applies with snap + marks dirty (matches move event style)
+                    events.push(CanvasEvent::Resized {
+                        id,
+                        position: new_pos,
+                        size: new_size,
+                    });
+                }
+            } else if let Some(id) = self.dragging_object {
                 if let Some(offset) = self.drag_offset {
                     if let Some(pointer) = response.interact_pointer_pos() {
                         let screen = WorldPoint::new(pointer.x - rect.min.x, pointer.y - rect.min.y);
@@ -124,6 +181,7 @@ impl CanvasInteraction {
         if response.drag_stopped() {
             self.dragging_object = None;
             self.drag_offset = None;
+            self.resizing = None;
         }
 
         events
@@ -154,6 +212,12 @@ pub fn draw_canvas(
     for object in &dimension.objects {
         let is_selected = selected == Some(object.id);
         draw_object(&painter, object, viewport, screen_size, rect.min, is_selected);
+    }
+
+    if let Some(sel_id) = selected {
+        if let Some(obj) = dimension.objects.iter().find(|o| o.id == sel_id) {
+            draw_resize_handles(&painter, obj, &viewport, screen_size, rect.min);
+        }
     }
 
     draw_minimap(&painter, rect, dimension, selected);
@@ -246,6 +310,16 @@ fn draw_object(
         egui::StrokeKind::Inside,
     );
 
+    // Futuristic accent header strip
+    let accent_col = egui::Color32::from_rgb(accent[0], accent[1], accent[2]);
+    let header_bar = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width(), 18.0));
+    painter.rect_filled(header_bar, 10.0, egui::Color32::from_rgba_unmultiplied(accent[0], accent[1], accent[2], 70));
+    // thin top line for depth
+    painter.line_segment(
+        [header_bar.min, egui::pos2(header_bar.max.x, header_bar.min.y)],
+        egui::Stroke::new(1.0, accent_col),
+    );
+
     let header = rect.shrink2(egui::vec2(12.0, 10.0));
     painter.text(
         header.min + egui::vec2(0.0, 0.0),
@@ -263,6 +337,34 @@ fn draw_object(
             egui::FontId::proportional(12.0),
             egui::Color32::from_gray(200),
         );
+    }
+}
+
+/// Draw 4 corner resize handles (small squares) when object is selected. Screen-pixel sized.
+fn draw_resize_handles(
+    painter: &egui::Painter,
+    object: &SmartObject,
+    viewport: &Viewport,
+    screen_size: WorldSize,
+    origin: egui::Pos2,
+) {
+    let screen_rect = object_screen_rect(object, viewport, screen_size, origin);
+    if screen_rect.width() < 12.0 || screen_rect.height() < 12.0 {
+        return;
+    }
+    let h = 7.0_f32;
+    let stroke = egui::Stroke::new(1.0, egui::Color32::WHITE);
+    let fill = egui::Color32::from_rgb(255, 255, 255);
+    let corners = [
+        screen_rect.min,
+        screen_rect.min + egui::vec2(screen_rect.width(), 0.0),
+        screen_rect.min + egui::vec2(0.0, screen_rect.height()),
+        screen_rect.min + egui::vec2(screen_rect.width(), screen_rect.height()),
+    ];
+    for c in corners {
+        let r = egui::Rect::from_center_size(c, egui::vec2(h, h));
+        painter.rect_filled(r, 1.0, fill);
+        painter.rect_stroke(r, 1.0, stroke, egui::StrokeKind::Inside);
     }
 }
 
@@ -351,4 +453,95 @@ fn draw_overlay(painter: &egui::Painter, rect: egui::Rect, viewport: Viewport, n
         egui::FontId::monospace(12.0),
         egui::Color32::from_gray(170),
     );
+}
+
+/// Compute screen rect (in painter local coords) for an object.
+fn object_screen_rect(
+    object: &SmartObject,
+    viewport: &Viewport,
+    screen_size: WorldSize,
+    origin: egui::Pos2,
+) -> egui::Rect {
+    let tl = viewport.world_to_screen(object.position, screen_size);
+    let br = viewport.world_to_screen(
+        WorldPoint::new(
+            object.position.x + object.size.width,
+            object.position.y + object.size.height,
+        ),
+        screen_size,
+    );
+    egui::Rect::from_min_max(
+        origin + egui::vec2(tl.x, tl.y),
+        origin + egui::vec2(br.x, br.y),
+    )
+}
+
+/// Hit test for resize handles on a selected object's screen rect. Returns the corner if pointer (screen local) hits a handle.
+fn hit_resize_handle(
+    object: &SmartObject,
+    pointer_screen: WorldPoint,
+    viewport: &Viewport,
+    screen_size: WorldSize,
+    origin: egui::Pos2,
+) -> Option<ResizeCorner> {
+    let screen_rect = object_screen_rect(object, viewport, screen_size, origin);
+    if screen_rect.width() < 20.0 || screen_rect.height() < 20.0 {
+        return None;
+    }
+    let h = 12.0_f32; // screen pixels, generous hit area
+    let corners = [
+        (ResizeCorner::TopLeft, screen_rect.min),
+        (ResizeCorner::TopRight, screen_rect.min + egui::vec2(screen_rect.width(), 0.0)),
+        (ResizeCorner::BottomLeft, screen_rect.min + egui::vec2(0.0, screen_rect.height())),
+        (
+            ResizeCorner::BottomRight,
+            screen_rect.min + egui::vec2(screen_rect.width(), screen_rect.height()),
+        ),
+    ];
+    let p = egui::pos2(pointer_screen.x, pointer_screen.y);
+    for (corner, c) in corners {
+        let hr = egui::Rect::from_center_size(c, egui::vec2(h, h));
+        if hr.contains(p) {
+            return Some(corner);
+        }
+    }
+    None
+}
+
+/// Given drag, compute new (position, size) for the corner being resized. Clamps to min dim. Does not snap here.
+fn compute_resized(
+    corner: ResizeCorner,
+    start_pointer: WorldPoint,
+    start_pos: WorldPoint,
+    start_size: WorldSize,
+    cur_pointer: WorldPoint,
+) -> (WorldPoint, WorldSize) {
+    let dx = cur_pointer.x - start_pointer.x;
+    let dy = cur_pointer.y - start_pointer.y;
+    let mut np = start_pos;
+    let mut ns = start_size;
+
+    match corner {
+        ResizeCorner::TopLeft => {
+            np.x = start_pos.x + dx;
+            np.y = start_pos.y + dy;
+            ns.width = (start_size.width - dx).max(MIN_OBJECT_DIM);
+            ns.height = (start_size.height - dy).max(MIN_OBJECT_DIM);
+        }
+        ResizeCorner::TopRight => {
+            np.y = start_pos.y + dy;
+            ns.width = (start_size.width + dx).max(MIN_OBJECT_DIM);
+            ns.height = (start_size.height - dy).max(MIN_OBJECT_DIM);
+        }
+        ResizeCorner::BottomLeft => {
+            np.x = start_pos.x + dx;
+            ns.width = (start_size.width - dx).max(MIN_OBJECT_DIM);
+            ns.height = (start_size.height + dy).max(MIN_OBJECT_DIM);
+        }
+        ResizeCorner::BottomRight => {
+            ns.width = (start_size.width + dx).max(MIN_OBJECT_DIM);
+            ns.height = (start_size.height + dy).max(MIN_OBJECT_DIM);
+        }
+    }
+    (np, ns)
 }

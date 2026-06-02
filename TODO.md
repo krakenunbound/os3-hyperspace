@@ -29,8 +29,8 @@ Short checklist — see **[docs/PHASES.md](docs/PHASES.md)** for full phase deta
 - [x] Selection + inspector panel
 - [x] Grid snap + minimap
 - [x] Persistent layout restore
-- [ ] Object linking across dimensions
-- [ ] Resize Smart Objects
+- [x] Resize Smart Objects (corner drag + inspector)
+- [ ] Object linking across dimensions (basic nav + targets done; polish todo)
 - [ ] Native Redox orbital shell
 
 ## Phase 3+: Compatibility, Polish, Release
