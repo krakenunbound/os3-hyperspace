@@ -215,6 +215,68 @@ fn hit_test(objects: &[SmartObject], point: WorldPoint) -> Option<&SmartObject> 
         .find(|object| object.contains(point))
 }
 
+/// Draw a starfield for "Hyperspace" immersion.
+/// Stars are placed in world space (anchored during pan), but we modulate count/size/alpha with zoom to simulate depth layers.
+/// This is cheap (no textures) and makes the infinite canvas feel alive and vast — key to "best OS" spatial UI vs traditional desktops.
+/// Deterministic-ish using simple math on world coords (no rand for reproducibility across frames).
+fn draw_starfield(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    viewport: Viewport,
+    screen_size: WorldSize,
+) {
+    let top_left = viewport.screen_to_world(WorldPoint::new(0.0, 0.0), screen_size);
+    let bottom_right = viewport.screen_to_world(
+        WorldPoint::new(screen_size.width, screen_size.height),
+        screen_size,
+    );
+
+    // Base density; higher zoom = "closer" stars, more visible small ones.
+    let zoom = viewport.zoom.clamp(0.1, 5.0);
+    let base_step = 120.0 / zoom.max(0.2);
+    let layers = 3;
+
+    for layer in 0..layers {
+        let layer_factor = 1.0 + layer as f32 * 0.7;
+        let step = base_step * layer_factor;
+        let size = (1.5 + layer as f32 * 0.8) * (zoom.min(1.5));
+        let alpha_base = (80.0 - layer as f32 * 15.0) * if zoom > 1.0 { 1.2 } else { 0.8 };
+        let alpha = alpha_base.min(90.0);
+
+        let color = egui::Color32::from_rgba_unmultiplied(200, 210, 255, alpha as u8);
+
+        let start_x = (top_left.x / step).floor() * step - step * 2.0;
+        let end_x = (bottom_right.x / step).ceil() * step + step * 2.0;
+        let start_y = (top_left.y / step).floor() * step - step * 2.0;
+        let end_y = (bottom_right.y / step).ceil() * step + step * 2.0;
+
+        let mut x = start_x;
+        while x < end_x {
+            let mut y = start_y;
+            while y < end_y {
+                // Simple "hash" for slight variation per position (no floating rand).
+                let hash = ((x * 12.9898 + y * 78.233).sin() * 43758.5453).fract();
+                let jitter_x = (hash - 0.5) * step * 0.3;
+                let jitter_y = ((hash * 1.3).fract() - 0.5) * step * 0.3;
+
+                let world = WorldPoint::new(x + jitter_x, y + jitter_y);
+                let screen = viewport.world_to_screen(world, screen_size);
+                let pos = egui::pos2(rect.min.x + screen.x, rect.min.y + screen.y);
+
+                if rect.contains(pos) {
+                    painter.circle_filled(pos, size, color);
+                    // occasional "bright" star
+                    if hash > 0.92 {
+                        painter.circle_filled(pos, size * 1.8, egui::Color32::from_rgba_unmultiplied(255, 255, 255, (alpha * 0.4) as u8));
+                    }
+                }
+                y += step;
+            }
+            x += step;
+        }
+    }
+}
+
 pub fn draw_canvas(
     ui: &mut egui::Ui,
     dimension: &Dimension,
@@ -225,7 +287,13 @@ pub fn draw_canvas(
     let painter = ui.painter_at(rect);
     let viewport = dimension.viewport;
 
-    painter.rect_filled(rect, 0.0, egui::Color32::from_rgb(12, 16, 28));
+    // Very dark base for hyperspace atmosphere (stars will show through a bit).
+    painter.rect_filled(rect, 0.0, egui::Color32::from_rgba_unmultiplied(8, 10, 18, 220));
+
+    // Hyperspace immersion: dynamic starfield background.
+    // Gives depth and "space" feel. Stars are world-anchored but density/brightness reacts to zoom for parallax-like effect.
+    // This moves the UI from "flat canvas app" toward "best OS" spatial experience.
+    draw_starfield(&painter, rect, viewport, screen_size);
 
     draw_grid(&painter, rect, viewport, screen_size);
 
@@ -357,6 +425,35 @@ fn draw_object(
             egui::FontId::proportional(12.0),
             egui::Color32::from_gray(200),
         );
+    }
+
+    // Special "best OS" visual for Link: portal/wormhole style.
+    // Concentric glowing rings + center dot to evoke hyperspace travel / multidimensional jump.
+    // Makes Links feel magical and distinct from static cards — advances the "Smart Objects as living portals" vision.
+    if object.kind == ObjectKind::Link {
+        let cx = rect.center().x;
+        let cy = rect.center().y;
+        let max_r = (rect.width().min(rect.height()) * 0.35).min(40.0);
+        for i in 0..3 {
+            let r = max_r * (0.4 + i as f32 * 0.25);
+            let ring_alpha = 120 - i * 25;
+            let ring_col = egui::Color32::from_rgba_unmultiplied(248, 113, 113, ring_alpha as u8);
+            painter.circle_stroke(egui::pos2(cx, cy), r, egui::Stroke::new(1.5, ring_col));
+        }
+        // Center "event horizon"
+        painter.circle_filled(egui::pos2(cx, cy), max_r * 0.2, egui::Color32::from_rgb(20, 10, 30));
+        painter.circle_filled(egui::pos2(cx, cy), max_r * 0.12, egui::Color32::from_rgb(248, 113, 113));
+    }
+
+    // Agent "liveness" indicator for best-OS feel: subtle inner glow + small "neural" dot.
+    // Signals that Agents are active AI entities, not static icons. (Real behavior comes later via hyperspace-ai.)
+    if object.kind == ObjectKind::Agent {
+        let cx = rect.center().x;
+        let cy = rect.center().y;
+        let r = (rect.width().min(rect.height()) * 0.15).min(18.0);
+        painter.circle_filled(egui::pos2(cx, cy), r * 0.9, egui::Color32::from_rgba_unmultiplied(192, 132, 252, 40));
+        // "pulse" core
+        painter.circle_filled(egui::pos2(cx, cy), r * 0.4, egui::Color32::from_rgb(220, 180, 255));
     }
 }
 

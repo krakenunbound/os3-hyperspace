@@ -37,6 +37,7 @@ Each object has:
 | Click empty canvas | Deselect |
 | Drag object | Move; snaps to 20px grid |
 | Drag corner (selected) | Resize; snaps size lightly to grid |
+| Canvas background | Dynamic layered starfield (zoom/pan reactive "hyperspace" depth for immersion) |
 | Double-click empty canvas | Spawn new **Note** at cursor |
 | Spawn buttons (left HUD) | Create object at world origin (0, 0) — now includes Link |
 | Inspector edits | Update title/body/size; for Link set target dim; marks workspace dirty |
@@ -64,12 +65,13 @@ Selected objects render with a white border and brighter fill.
 - Persistent conversation thread per agent object
 - Runs inference locally via `hyperspace-ai` (no cloud required)
 - Can act on other Smart Objects in the same dimension
+- Visual liveness: Inner glow + bright neural core to signal "alive" AI (part of making objects feel smart and immersive toward "best OS").
 
 ### Link
 
 - Points to another dimension (or future object/URL)
 - Click navigates/activates when target set
-- Basic cross-dim linking implemented (target picker in Inspector, HUD spawn, click-to-nav if set, demo pre-linked example, stored in persistence). Polish (link visuals/arrows, richer targets) remains.
+- Visual: Renders as glowing portal/wormhole (concentric rings + core, per Link accent) for "best OS" magical multidimensional feel. Basic cross-dim linking implemented (target picker in Inspector, HUD spawn, click-to-nav if set, demo pre-linked example, stored in persistence). Next polish: actual drawn connections/lines to targets, richer targets.
 
 ---
 

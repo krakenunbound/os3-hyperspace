@@ -19,6 +19,11 @@ See [docs/DEVELOPMENT-LOG.md](docs/DEVELOPMENT-LOG.md) for *exhaustive* session-
   - Demo workspace now includes a pre-wired "Link to Work" example.
 - Small visual polish: kind-colored accent header strip + top line on every object card for more futuristic card-like appearance.
 - Full project skeleton now tracked in git + pushed to GitHub (previously only minimal docs skeleton was committed; source was on disk but untracked).
+- **"Best OS" visual iteration** (see docs/DEVELOPMENT-LOG.md top entry for full self-reflection "how can we make the best os?" + "are we there yet?"):
+  - Dynamic layered starfield background in canvas (world-anchored, zoom/pan reactive density/size/alpha for true hyperspace depth and immersion).
+  - Link objects render as glowing portals/wormholes (concentric rings + event horizon core using accent color).
+  - Agent objects render with inner neural glow + bright core to convey "alive" AI liveness.
+  - These directly advance immersion, Smart Object "smartness", and the inspirational futuristic UI vision.
 
 ### Changed
 - Canvas input now prioritizes resize handles on selected objects before object dragging.

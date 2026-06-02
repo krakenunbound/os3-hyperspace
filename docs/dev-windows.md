@@ -4,9 +4,9 @@ Run and iterate on the shell prototype while Redox integration is in progress.
 
 **Related:** [PHASES.md](PHASES.md) · [smart-objects.md](smart-objects.md) · [persistence.md](persistence.md) · [redox-roadmap.md](redox-roadmap.md)
 
-Implemented in this build: resize handles (canvas + inspector), basic Link navigation + target setting in inspector, demo Link prewired, accent header polish on objects.
+Implemented in this build (and latest iteration): resize handles (canvas + inspector), basic Link navigation + target setting in inspector, demo Link prewired, accent header polish on objects, dynamic starfield for hyperspace immersion, Link as glowing portals, Agents with neural glow for liveness.
 
-Still documented targets: full object linking polish, Redox VM, local inference.
+Still documented targets: full object linking polish (visual connections), Redox VM, local inference, deeper Smart Object behaviors (nesting, reactivity).
 
 ---
 
@@ -64,9 +64,11 @@ First build downloads dependencies (~430 crates); subsequent builds are fast.
 | Double-click (empty) | Create Note at cursor (always Note; Link kind not double-click creatable today) |
 | Drag object | Move (snaps to 20px grid) |
 | Drag corner handles (selected) | Resize object (snaps size to grid on release) |
+| Canvas background | Dynamic starfield (layered, zoom/pan reactive for hyperspace depth/immersion) |
 | Click object | Select → Inspector opens (all kinds including Link) |
 | Click Agent | Select + invoke stub agent |
-| Click Link | Select + if target set, navigate to that dimension |
+| Click Link | Select + if target set, navigate to that dimension (Link renders as glowing portal) |
+| Click Agent | Select + invoke stub; Agent renders with neural glow for "liveness" |
 | Click empty canvas | Deselect |
 
 ### Keyboard

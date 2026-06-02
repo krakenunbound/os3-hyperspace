@@ -2,7 +2,7 @@
 
 **Current phase:** Phase 0 (prototype running) with early Phase 2 shell features done.
 
-**Last updated:** 2026-06-03 (post resize + basic linking)
+**Last updated:** 2026-06-03 (post resize + basic linking + visual immersion iteration for "best OS")
 
 This is the source of truth for project progress (Phases 0–4 with status tables ✅ / ⬜, exit criteria, and suggested build order). [TODO.md](../TODO.md) is a short mirror of this file. See [README.md](README.md) (in docs/) for the documentation index.
 
@@ -59,6 +59,7 @@ This is the source of truth for project progress (Phases 0–4 with status table
 | Grid snap | ✅ Done | 20px world grid |
 | Minimap | ✅ Done | Bottom-right overview |
 | Persistent layout | ✅ Done | Auto-load/save JSON |
+| Canvas immersion & object liveness visuals | 🟡 In progress | Starfield bg for hyperspace depth; Link as glowing portals, Agents with neural glow (see DEVELOPMENT-LOG 2026-06-03 iteration). More polish todo. |
 | Native Redox orbital shell | ⬜ Todo | Replace eframe/egui layer |
 | Object linking across dimensions | 🟡 Partial | `Link` kind + link_target + HUD spawn + Inspector picker + click-to-navigate + demo prewire + persistence. Polish (arrows, object targets, feedback) todo. See [smart-objects.md](smart-objects.md) |
 | Resize Smart Objects | ✅ Done | Drag corner handles on selection (live + snap); Inspector size DragValues; min sizes, works on all kinds incl Links |
