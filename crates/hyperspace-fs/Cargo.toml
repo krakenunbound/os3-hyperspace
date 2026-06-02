@@ -1,0 +1,20 @@
+[package]
+name = "hyperspace-fs"
+description = "Hyperspace filesystem abstractions for OS/3 Hyperspace"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+hyperspace-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+dirs = "6"
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

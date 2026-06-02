@@ -1,0 +1,13 @@
+[package]
+name = "hyperspace-core"
+description = "Core types for OS/3 Hyperspace — dimensions, smart objects, viewport"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }

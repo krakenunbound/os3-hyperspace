@@ -1,0 +1,21 @@
+[package]
+name = "hyperspace-shell"
+description = "OS/3 Hyperspace shell prototype — infinite zoom canvas on Windows/Linux/macOS"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "hyperspace-shell"
+path = "src/main.rs"
+
+[dependencies]
+hyperspace-core = { workspace = true }
+hyperspace-ai = { workspace = true }
+hyperspace-fs = { workspace = true }
+eframe = { version = "0.31", default-features = true }
+egui = "0.31"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
