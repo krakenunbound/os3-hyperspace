@@ -37,7 +37,8 @@ Each object has:
 | Click empty canvas | Deselect |
 | Drag object | Move; snaps to 20px grid |
 | Drag corner (selected) | Resize; snaps size lightly to grid |
-| Canvas background | Dynamic layered starfield (zoom/pan reactive "hyperspace" depth for immersion) |
+| Canvas background | Dynamic layered starfield + colored nebulae (zoom/pan reactive rich hyperspace depth) |
+| Smart Object visuals (2026-06) | Premium glassmorphic cards: soft shadows, layered "glass" bodies, per-kind icons + badges in header, strong neon selection glow, special portal rendering for Links and neural glow for Agents (see DEVELOPMENT-LOG "GUI Modernization" entry) |
 | Double-click empty canvas | Spawn new **Note** at cursor |
 | Spawn buttons (left HUD) | Create object at world origin (0, 0) — now includes Link |
 | Inspector edits | Update title/body/size; for Link set target dim; marks workspace dirty |

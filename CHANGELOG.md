@@ -25,6 +25,17 @@ See [docs/DEVELOPMENT-LOG.md](docs/DEVELOPMENT-LOG.md) for *exhaustive* session-
   - Agent objects render with inner neural glow + bright core to convey "alive" AI liveness.
   - These directly advance immersion, Smart Object "smartness", and the inspirational futuristic UI vision.
 
+- **Major GUI Modernization** (see docs/DEVELOPMENT-LOG.md "2026-06-03 GUI Modernization" entry responding directly to user feedback + the high-end futuristic reference image provided):
+  - Deep space + vibrant neon theme (much darker cosmic palette, purple/cyan/magenta accents, modern spacing/typography, glass-like panel fills).
+  - Per-kind unicode icons (📝🚀📁🧠🌀) + small kind badges on object headers for instant recognition.
+  - Premium glassmorphic Smart Object "cards": soft drop shadows, layered inset content rects for depth, strong multi-layer neon outer glow when selected, rich headers with icon + title + badge.
+  - Richer cosmic background: existing starfield + new large low-alpha purple/cyan nebula clouds (directly evokes the beautiful nebulae, light streaks, and depth in the reference image).
+  - Modern OS top menubar with Workspaces / Objects / System / AI sections (inspired by the reference top bar).
+  - Polished left "HYPERDRIVE" and right "INSPECTOR" glass side panels with better section headers and icon usage.
+  - New glassy bottom dock/taskbar with quick actions and "Local-first" branding (completes the full modern desktop silhouette).
+  - Subtler futuristic grid + glass-themed minimap/overlay.
+  - All changes dramatically improve "modern and attractive" feel while preserving the core infinite canvas + Smart Objects vision.
+
 ### Changed
 - Canvas input now prioritizes resize handles on selected objects before object dragging.
 - Event system extended: `CanvasEvent::Resized` and `CanvasEvent::LinkActivate`.

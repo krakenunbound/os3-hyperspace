@@ -158,14 +158,18 @@ impl HyperspaceApp {
     }
 
     fn top_bar(&mut self, ctx: &egui::Context) {
-        egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
+        egui::TopBottomPanel::top("top_bar").frame(
+            egui::Frame::default()
+                .fill(egui::Color32::from_rgb(6, 8, 16))
+                .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 50, 90)))
+        ).show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.heading("OS/3 Hyperspace");
-                if self.dirty {
-                    ui.label(egui::RichText::new("●").color(egui::Color32::from_rgb(255, 196, 86)));
-                }
-                ui.separator();
+                // Premium top menubar inspired by the reference mockup (Workspaces, Apps/Objects, System, AI)
+                ui.label(egui::RichText::new("OS/3 HYPERSPACE").strong().color(egui::Color32::from_rgb(200, 160, 255)));
+                ui.add_space(12.0);
 
+                // "Workspaces" section (our Dimensions)
+                ui.label(egui::RichText::new("Workspaces").small().color(egui::Color32::from_rgb(170, 180, 210)));
                 let tabs: Vec<(DimensionId, String)> = self
                     .state
                     .dimensions
@@ -175,39 +179,48 @@ impl HyperspaceApp {
                 let active_id = self.active_dimension_id();
                 for (id, name) in tabs {
                     let selected = id == active_id;
-                    if ui.selectable_label(selected, name).clicked() {
+                    let text = egui::RichText::new(name).color(if selected { egui::Color32::from_rgb(220, 200, 255) } else { egui::Color32::from_rgb(180, 190, 220) });
+                    if ui.selectable_label(selected, text).clicked() {
                         self.switch_dimension(id);
                     }
                 }
 
                 ui.separator();
-                ui.label("New:");
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.new_dimension_name)
-                        .desired_width(100.0)
-                        .hint_text("Name"),
-                );
-                if ui.button("+ Dimension").clicked() {
-                    let name = if self.new_dimension_name.trim().is_empty() {
-                        format!("Dimension {}", self.state.dimensions.len() + 1)
-                    } else {
-                        self.new_dimension_name.trim().to_string()
-                    };
-                    self.state.add_dimension(name);
-                    self.new_dimension_name.clear();
-                    self.selected_object = None;
-                    self.status = "Created dimension".into();
-                    self.mark_dirty();
+
+                // "Objects" / spawn quick access (like Apps in the mockup)
+                ui.label(egui::RichText::new("Objects").small().color(egui::Color32::from_rgb(170, 180, 210)));
+                if ui.button("Spawn").clicked() {
+                    // Could open a popup in future; for now just hint
+                    self.status = "Use left HUD Spawn buttons (or double-click canvas for Note)".into();
                 }
 
+                ui.separator();
+
+                ui.label(egui::RichText::new("System").small().color(egui::Color32::from_rgb(170, 180, 210)));
+                if ui.button("About").clicked() {
+                    self.status = "OS/3 Hyperspace — AI-native multidimensional prototype (egui desktop)".into();
+                }
+
+                ui.separator();
+
+                ui.label(egui::RichText::new("AI").small().color(egui::Color32::from_rgb(170, 180, 210)));
+                if ui.button("Copilot").clicked() {
+                    self.status = "AI Runtime available in left HUD. Local-first, always yours.".into();
+                }
+
+                // Dirty indicator + right side (status like the mockup's top-right icons/time)
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if self.dirty {
+                        ui.label(egui::RichText::new("● UNSAVED").color(egui::Color32::from_rgb(255, 196, 86)).small());
+                    }
+                    ui.label(egui::RichText::new(&self.status).small().color(egui::Color32::from_rgb(140, 150, 180)));
+                    ui.add_space(8.0);
                     if ui.button("Save").clicked() {
                         self.save_workspace();
                     }
-                    if ui.button("Toggle HUD").clicked() {
+                    if ui.button("⛶").clicked() { // toggle HUD like "full" button
                         self.show_hud = !self.show_hud;
                     }
-                    ui.label(&self.status);
                 });
             });
         });
@@ -221,19 +234,23 @@ impl HyperspaceApp {
         egui::SidePanel::left("hud")
             .resizable(true)
             .default_width(260.0)
+            .frame(egui::Frame::default()
+                .fill(egui::Color32::from_rgb(8, 10, 18))
+                .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(35, 45, 75))))
             .show(ctx, |ui| {
-                ui.heading("Controls");
-                ui.label("Scroll — zoom at cursor");
-                ui.label("Middle-drag — pan canvas");
-                ui.label("Space + drag — pan canvas");
-                ui.label("Double-click — new note");
-                ui.label("Drag object — move (snaps to grid)");
-                ui.label("Drag corner handles (on selection) — resize");
-                ui.label("Delete — remove selection");
-                ui.label("Ctrl+S — save workspace");
-                ui.separator();
+                // Modern section header like the left sidebar in the reference
+                ui.add_space(4.0);
+                ui.label(egui::RichText::new("HYPERDRIVE").strong().color(egui::Color32::from_rgb(180, 150, 255)).small());
+                ui.add_space(2.0);
 
-                ui.heading("Spawn");
+                ui.label(egui::RichText::new("Controls").color(egui::Color32::from_rgb(140, 150, 190)).small());
+                ui.label(egui::RichText::new("Scroll — zoom • Middle/Space-drag — pan • Double-click — note").small().color(egui::Color32::from_rgb(160, 165, 190)));
+                ui.label(egui::RichText::new("Drag corners — resize • Delete — remove • Ctrl+S — save").small().color(egui::Color32::from_rgb(160, 165, 190)));
+                ui.add_space(6.0);
+
+                // Spawn section styled like quick access in the mockup
+                ui.separator();
+                ui.label(egui::RichText::new("SPAWN OBJECTS").color(egui::Color32::from_rgb(180, 150, 255)).small());
                 ui.horizontal_wrapped(|ui| {
                     for kind in [
                         ObjectKind::Note,
@@ -242,21 +259,24 @@ impl HyperspaceApp {
                         ObjectKind::Agent,
                         ObjectKind::Link,
                     ] {
-                        if ui.button(kind.label()).clicked() {
+                        let btn = ui.button(format!("{} {}", kind.symbol(), kind.label()));
+                        if btn.clicked() {
                             self.spawn_object(kind, WorldPoint::new(0.0, 0.0));
                         }
                     }
                 });
 
+                ui.add_space(6.0);
                 ui.separator();
-                ui.heading("AI Runtime");
+
+                // AI section (dashboard style)
+                ui.label(egui::RichText::new("AI RUNTIME").color(egui::Color32::from_rgb(180, 150, 255)).small());
                 if ui.button("Ping local agent").clicked() {
                     match self.agent_runtime.ping() {
                         Ok(reply) => self.status = reply,
                         Err(err) => self.status = err.to_string(),
                     }
                 }
-
                 if ui.button("Ask about this dimension").clicked() {
                     let prompt = self
                         .state
@@ -270,21 +290,20 @@ impl HyperspaceApp {
                     }
                 }
 
+                ui.add_space(6.0);
                 ui.separator();
-                ui.heading("Hyperspace FS");
-                ui.label(format!(
-                    "Store: {}",
-                    self.workspace_store.path().display()
-                ));
-                if ui.button("Sync to in-memory store").clicked() {
+
+                // FS / System info (clean like the mockup's system panels)
+                ui.label(egui::RichText::new("HYPERSPACE FS").color(egui::Color32::from_rgb(180, 150, 255)).small());
+                ui.label(egui::RichText::new(format!("Store: {}", self.workspace_store.path().display())).small().color(egui::Color32::from_rgb(150, 160, 190)));
+                if ui.button("Sync store").clicked() {
                     self.sync_active_dimension();
                     if let Ok(entries) = self.store.list_active(self.active_dimension_id()) {
                         self.status = format!("Synced {} objects", entries.len());
                     }
                 }
-
                 if let Ok(entries) = self.store.list_active(self.active_dimension_id()) {
-                    ui.label(format!("Stored objects: {}", entries.len()));
+                    ui.label(egui::RichText::new(format!("{} objects in active dimension", entries.len())).small());
                 }
             });
     }
@@ -310,31 +329,41 @@ impl HyperspaceApp {
         egui::SidePanel::right("inspector")
             .resizable(true)
             .default_width(280.0)
+            .frame(egui::Frame::default()
+                .fill(egui::Color32::from_rgb(8, 10, 18))
+                .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(35, 45, 75))))
             .show(ctx, |ui| {
-                ui.heading("Inspector");
+                ui.add_space(4.0);
+                ui.label(egui::RichText::new("INSPECTOR").strong().color(egui::Color32::from_rgb(180, 150, 255)).small());
+                ui.add_space(4.0);
 
                 let Some(object) = self.state.find_object_mut(dimension_id, selected_id) else {
                     ui.label("Object not found.");
                     return;
                 };
 
-                ui.label(format!("Type: {}", object.kind.label()));
+                // Kind + icon header like modern property panels
+                ui.horizontal(|ui| {
+                    ui.label(egui::RichText::new(object.kind.symbol()).size(18.0));
+                    ui.label(egui::RichText::new(object.kind.label()).strong().color(egui::Color32::from_rgb(220, 210, 255)));
+                });
                 ui.separator();
 
                 if object.kind == ObjectKind::Link {
-                    ui.label("Link Target (click to set):");
+                    ui.label(egui::RichText::new("LINK TARGET").small().color(egui::Color32::from_rgb(160, 170, 200)));
                     for (tid, tname) in &other_dims {
                         let is_set = object.link_target == Some(*tid);
-                        if ui.selectable_label(is_set, tname).clicked() {
+                        let label = if is_set { format!("● {}", tname) } else { tname.clone() };
+                        if ui.selectable_label(is_set, label).clicked() {
                             object.link_target = Some(*tid);
                             changed = true;
                         }
                     }
-                    if ui.button("Clear link target").clicked() {
+                    if ui.button(egui::RichText::new("Clear Target").small()).clicked() {
                         object.link_target = None;
                         changed = true;
                     }
-                    ui.separator();
+                    ui.add_space(4.0);
                 }
 
                 changed |= ui
@@ -354,9 +383,9 @@ impl HyperspaceApp {
                     object.position.x, object.position.y
                 ));
 
-                // Editable size (for resize + direct entry)
+                // Editable size (for resize + direct entry) — clean modern controls
+                ui.label(egui::RichText::new("SIZE").small().color(egui::Color32::from_rgb(160, 170, 200)));
                 ui.horizontal(|ui| {
-                    ui.label("Size:");
                     let mut w = object.size.width;
                     let mut h = object.size.height;
                     let w_changed = ui
@@ -382,7 +411,9 @@ impl HyperspaceApp {
                     }
                 });
 
-                if ui.button("Delete object").clicked() {
+                ui.add_space(6.0);
+
+                if ui.button(egui::RichText::new("Delete Object").color(egui::Color32::from_rgb(255, 140, 140))).clicked() {
                     delete_requested = true;
                 }
             });
@@ -505,6 +536,39 @@ impl eframe::App for HyperspaceApp {
 
                 canvas::draw_canvas(ui, dimension, screen_size, selected_object);
             }
+
+            // Bottom dock / taskbar — modern OS feel like the reference image
+            // (quick actions, search hint, active dimension indicator). Glassy dark with neon accents.
+            egui::TopBottomPanel::bottom("dock")
+                .frame(egui::Frame::default()
+                    .fill(egui::Color32::from_rgb(6, 8, 16))
+                    .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 50, 90))))
+                .show(ctx, |ui| {
+                    ui.horizontal_centered(|ui| {
+                        ui.label(egui::RichText::new("⌘").small());
+                        ui.label(egui::RichText::new("Quick Dock").small().color(egui::Color32::from_rgb(150, 160, 190)));
+                        ui.add_space(12.0);
+
+                        if ui.button("New Note").clicked() {
+                            if let Some(dim) = self.state.active_dimension_mut() {
+                                let pos = WorldPoint::new(dim.viewport.pan_x + 80.0, dim.viewport.pan_y + 60.0);
+                                let obj = SmartObject::note("Quick Note", pos).with_body("Created from dock");
+                                dim.objects.push(obj);
+                                self.mark_dirty();
+                                self.sync_active_dimension();
+                            }
+                        }
+                        if ui.button("AI Chat").clicked() {
+                            self.status = "Use left HUD 'Ask about this dimension' for now.".into();
+                        }
+
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(egui::RichText::new(format!("Dim: {}", self.state.active_dimension().map(|d| d.name.as_str()).unwrap_or("?"))).small().color(egui::Color32::from_rgb(140, 150, 180)));
+                            ui.add_space(8.0);
+                            ui.label(egui::RichText::new("OS/3 Hyperspace • Local-first").small().color(egui::Color32::from_rgb(100, 110, 140)));
+                        });
+                    });
+                });
 
             self.selected_object = selected_object;
             if let Some(status) = status_update {

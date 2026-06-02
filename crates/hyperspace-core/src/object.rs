@@ -34,6 +34,20 @@ impl ObjectKind {
             Self::Link => [248, 113, 113],
         }
     }
+
+    /// Returns a unicode/emoji symbol for premium per-kind iconography in the UI.
+    /// Used in draw_object headers to make Smart Objects look like distinct modern
+    /// "apps" or "portals" (inspired by the high-end mockup's icon-rich cards and sidebars).
+    /// Keeps us lightweight (no external icon fonts required in egui prototype).
+    pub fn symbol(self) -> &'static str {
+        match self {
+            Self::Note => "📝",   // or "✎" for more minimal
+            Self::App => "🚀",
+            Self::Folder => "📁",
+            Self::Agent => "🧠",
+            Self::Link => "🌀",   // or "🔗" – portal/wormhole vibe fits "best OS" multidimensional feel
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

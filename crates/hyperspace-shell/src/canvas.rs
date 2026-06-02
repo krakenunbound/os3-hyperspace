@@ -275,6 +275,32 @@ fn draw_starfield(
             x += step;
         }
     }
+
+    // Subtle colored nebula "clouds" / cosmic dust for richer hyperspace background
+    // (directly inspired by the beautiful nebulae, light streaks, and depth in the reference mockup).
+    // Very low alpha so they don't fight the UI; they sell the "vast living space" feeling.
+    let nebula_color1 = egui::Color32::from_rgba_unmultiplied(120, 80, 220, 22); // purple nebula
+    let nebula_color2 = egui::Color32::from_rgba_unmultiplied(60, 160, 220, 18); // cyan nebula
+    for (i, &col) in [nebula_color1, nebula_color2].iter().enumerate() {
+        let n_step = 380.0 + i as f32 * 70.0;
+        let n_size = 95.0 + i as f32 * 25.0;
+        let ox = (viewport.pan_x * 0.15 + i as f32 * 40.0) % n_step;
+        let oy = (viewport.pan_y * 0.12 + i as f32 * 55.0) % n_step;
+
+        let mut nx = top_left.x - (top_left.x % n_step) - n_step + ox;
+        while nx < bottom_right.x + n_step {
+            let mut ny = top_left.y - (top_left.y % n_step) - n_step + oy;
+            while ny < bottom_right.y + n_step {
+                let npos = viewport.world_to_screen(WorldPoint::new(nx, ny), screen_size);
+                let p = egui::pos2(rect.min.x + npos.x, rect.min.y + npos.y);
+                if rect.expand(60.0).contains(p) {
+                    painter.circle_filled(p, n_size * (0.7 + (i as f32 * 0.15)), col);
+                }
+                ny += n_step;
+            }
+            nx += n_step;
+        }
+    }
 }
 
 pub fn draw_canvas(
@@ -335,13 +361,14 @@ fn draw_grid(
     let start_y = (top_left.y / base_spacing).floor() * base_spacing;
     let end_y = (bottom_right.y / base_spacing).ceil() * base_spacing;
 
-    let grid_color = egui::Color32::from_rgba_unmultiplied(120, 140, 180, 28);
+    // Premium subtle glowing grid (less "graph paper", more futuristic HUD overlay)
+    let grid_color = egui::Color32::from_rgba_unmultiplied(90, 110, 160, 22);
     let mut x = start_x;
     while x <= end_x {
         let screen = viewport.world_to_screen(WorldPoint::new(x, 0.0), screen_size);
         let from = egui::pos2(rect.min.x + screen.x, rect.min.y);
         let to = egui::pos2(rect.min.x + screen.x, rect.max.y);
-        painter.line_segment([from, to], egui::Stroke::new(1.0, grid_color));
+        painter.line_segment([from, to], egui::Stroke::new(0.75, grid_color));
         x += base_spacing;
     }
 
@@ -350,7 +377,7 @@ fn draw_grid(
         let screen = viewport.world_to_screen(WorldPoint::new(0.0, y), screen_size);
         let from = egui::pos2(rect.min.x, rect.min.y + screen.y);
         let to = egui::pos2(rect.max.x, rect.min.y + screen.y);
-        painter.line_segment([from, to], egui::Stroke::new(1.0, grid_color));
+        painter.line_segment([from, to], egui::Stroke::new(0.75, grid_color));
         y += base_spacing;
     }
 }
@@ -382,78 +409,143 @@ fn draw_object(
     }
 
     let accent = object.kind.accent();
-    let fill = egui::Color32::from_rgba_unmultiplied(accent[0], accent[1], accent[2], if selected { 64 } else { 36 });
-    let stroke_color = if selected {
-        egui::Color32::WHITE
-    } else {
-        egui::Color32::from_rgb(accent[0], accent[1], accent[2])
-    };
-    let stroke_width = if selected { 2.5 } else { 1.5 };
+    let accent_col = egui::Color32::from_rgb(accent[0], accent[1], accent[2]);
 
+    // === PREMIUM "MODERN GLASS CARD / FLOATING WINDOW" LOOK ===
+    // Designed to feel like the sleek, glowing, high-end cards and windows in the reference mockup
+    // (deep space + neon, subtle glassmorphism via layered fills, soft shadows, rich headers with icons).
+    // This is the main visual upgrade to escape "basic" egui appearance while staying true to the
+    // infinite-canvas + Smart Objects vision (no traditional overlapping OS windows yet).
+
+    // 1. Soft drop shadow (simulated - egui has limited real shadow support)
+    let shadow_offset = egui::vec2(4.0, 6.0);
+    let shadow_rect = rect.translate(shadow_offset);
     painter.rect(
-        rect,
-        10.0,
-        fill,
-        egui::Stroke::new(stroke_width, stroke_color),
+        shadow_rect,
+        12.0,
+        egui::Color32::from_rgba_unmultiplied(0, 0, 0, 70),
+        egui::Stroke::NONE,
         egui::StrokeKind::Inside,
     );
 
-    // Futuristic accent header strip
-    let accent_col = egui::Color32::from_rgb(accent[0], accent[1], accent[2]);
-    let header_bar = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width(), 18.0));
-    painter.rect_filled(header_bar, 10.0, egui::Color32::from_rgba_unmultiplied(accent[0], accent[1], accent[2], 70));
-    // thin top line for depth
-    painter.line_segment(
-        [header_bar.min, egui::pos2(header_bar.max.x, header_bar.min.y)],
-        egui::Stroke::new(1.0, accent_col),
+    // 2. Main glassmorphic card body (slightly inset "content" area for depth)
+    let body_fill = if selected {
+        egui::Color32::from_rgba_unmultiplied(12, 14, 26, 235)
+    } else {
+        egui::Color32::from_rgba_unmultiplied(10, 12, 22, 225)
+    };
+    painter.rect(
+        rect,
+        11.0,
+        body_fill,
+        egui::Stroke::new(if selected { 2.0 } else { 1.0 }, accent_col),
+        egui::StrokeKind::Inside,
     );
 
-    let header = rect.shrink2(egui::vec2(12.0, 10.0));
+    // 3. Subtle inner "glass" highlight / content area (gives the premium layered look from the image)
+    let inner_margin = 3.0;
+    let inner_rect = rect.shrink(inner_margin);
+    painter.rect(
+        inner_rect,
+        9.0,
+        egui::Color32::from_rgba_unmultiplied(18, 20, 34, 160),
+        egui::Stroke::NONE,
+        egui::StrokeKind::Inside,
+    );
+
+    // 4. Stronger outer neon glow when selected (like active windows in the mockup)
+    if selected {
+        for i in 0..3 {
+            let expand = 3.0 + i as f32 * 2.5;
+            let alpha = 35 - i * 8;
+            painter.rect(
+                rect.expand(expand),
+                14.0,
+                egui::Color32::from_rgba_unmultiplied(accent[0], accent[1], accent[2], alpha as u8),
+                egui::Stroke::NONE,
+                egui::StrokeKind::Outside,
+            );
+        }
+    }
+
+    // === HEADER (icon + title + kind badge, modern like the reference) ===
+    let header_height = 22.0;
+    let header_rect = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width(), header_height));
+
+    // Subtle header background strip (glass over the card)
+    painter.rect_filled(
+        header_rect,
+        9.0,
+        egui::Color32::from_rgba_unmultiplied(accent[0], accent[1], accent[2], if selected { 55 } else { 35 }),
+    );
+
+    // Icon + title (premium typography + per-kind symbol for instant recognition)
+    let icon = object.kind.symbol();
+    let title_text = format!("{}  {}", icon, object.title);
     painter.text(
-        header.min + egui::vec2(0.0, 0.0),
+        header_rect.min + egui::vec2(8.0, 3.0),
         egui::Align2::LEFT_TOP,
-        format!("{} · {}", object.kind.label(), object.title),
-        egui::FontId::proportional(14.0),
-        egui::Color32::WHITE,
+        title_text,
+        egui::FontId::proportional(13.0),
+        egui::Color32::from_rgb(245, 248, 255),
     );
 
-    if rect.height() > 48.0 {
+    // Small kind badge on the right of header (very "modern OS" touch from the mockup)
+    let badge = object.kind.label();
+    let badge_width = (badge.len() as f32 * 6.5) + 10.0;
+    let badge_rect = egui::Rect::from_min_size(
+        egui::pos2(header_rect.max.x - badge_width - 6.0, header_rect.min.y + 3.0),
+        egui::vec2(badge_width, 16.0),
+    );
+    painter.rect_filled(badge_rect, 6.0, egui::Color32::from_rgba_unmultiplied(255, 255, 255, 25));
+    painter.text(
+        badge_rect.center() + egui::vec2(0.0, -1.0),
+        egui::Align2::CENTER_CENTER,
+        badge,
+        egui::FontId::proportional(9.0),
+        accent_col,
+    );
+
+    // === BODY CONTENT ===
+    if rect.height() > 52.0 {
+        let body_rect = rect.shrink2(egui::vec2(10.0, 26.0)).translate(egui::vec2(0.0, 4.0));
         painter.text(
-            header.min + egui::vec2(0.0, 22.0),
+            body_rect.min,
             egui::Align2::LEFT_TOP,
             &object.body,
-            egui::FontId::proportional(12.0),
-            egui::Color32::from_gray(200),
+            egui::FontId::proportional(11.5),
+            egui::Color32::from_rgb(210, 215, 230),
         );
     }
 
-    // Special "best OS" visual for Link: portal/wormhole style.
-    // Concentric glowing rings + center dot to evoke hyperspace travel / multidimensional jump.
-    // Makes Links feel magical and distinct from static cards — advances the "Smart Objects as living portals" vision.
+    // === SPECIAL "LIVING OBJECT" VISUALS (kept + lightly enhanced for best-OS feel) ===
+    // Link as glowing hyperspace portal (directly evokes the wormhole/neon portal aesthetics in the reference image)
     if object.kind == ObjectKind::Link {
         let cx = rect.center().x;
         let cy = rect.center().y;
-        let max_r = (rect.width().min(rect.height()) * 0.35).min(40.0);
-        for i in 0..3 {
-            let r = max_r * (0.4 + i as f32 * 0.25);
-            let ring_alpha = 120 - i * 25;
+        let max_r = (rect.width().min(rect.height()) * 0.32).min(36.0);
+        for i in 0..4 {
+            let r = max_r * (0.35 + i as f32 * 0.22);
+            let ring_alpha = 110 - i * 18;
             let ring_col = egui::Color32::from_rgba_unmultiplied(248, 113, 113, ring_alpha as u8);
-            painter.circle_stroke(egui::pos2(cx, cy), r, egui::Stroke::new(1.5, ring_col));
+            painter.circle_stroke(egui::pos2(cx, cy), r, egui::Stroke::new(1.8, ring_col));
         }
-        // Center "event horizon"
-        painter.circle_filled(egui::pos2(cx, cy), max_r * 0.2, egui::Color32::from_rgb(20, 10, 30));
-        painter.circle_filled(egui::pos2(cx, cy), max_r * 0.12, egui::Color32::from_rgb(248, 113, 113));
+        painter.circle_filled(egui::pos2(cx, cy), max_r * 0.22, egui::Color32::from_rgb(18, 8, 28));
+        painter.circle_filled(egui::pos2(cx, cy), max_r * 0.11, egui::Color32::from_rgb(255, 140, 160));
     }
 
-    // Agent "liveness" indicator for best-OS feel: subtle inner glow + small "neural" dot.
-    // Signals that Agents are active AI entities, not static icons. (Real behavior comes later via hyperspace-ai.)
+    // Agent with stronger neural "alive" presence
     if object.kind == ObjectKind::Agent {
         let cx = rect.center().x;
         let cy = rect.center().y;
-        let r = (rect.width().min(rect.height()) * 0.15).min(18.0);
-        painter.circle_filled(egui::pos2(cx, cy), r * 0.9, egui::Color32::from_rgba_unmultiplied(192, 132, 252, 40));
-        // "pulse" core
-        painter.circle_filled(egui::pos2(cx, cy), r * 0.4, egui::Color32::from_rgb(220, 180, 255));
+        let r = (rect.width().min(rect.height()) * 0.16).min(20.0);
+        painter.circle_filled(egui::pos2(cx, cy), r * 1.1, egui::Color32::from_rgba_unmultiplied(192, 132, 252, 55));
+        painter.circle_filled(egui::pos2(cx, cy), r * 0.55, egui::Color32::from_rgb(235, 200, 255));
+        // Small orbiting "thought" dots for extra life
+        let t = (rect.min.x * 0.03 + rect.min.y * 0.017).sin(); // cheap time-ish variation
+        let ox = (t * 6.0).cos() * r * 0.7;
+        let oy = (t * 5.0).sin() * r * 0.7;
+        painter.circle_filled(egui::pos2(cx + ox, cy + oy), 2.5, egui::Color32::from_rgb(255, 230, 255));
     }
 }
 
@@ -503,15 +595,16 @@ fn draw_minimap(
         map_size,
     );
 
+    // Modern glass minimap frame
     painter.rect_filled(
         map_rect,
-        6.0,
-        egui::Color32::from_rgba_unmultiplied(8, 12, 22, 200),
+        7.0,
+        egui::Color32::from_rgba_unmultiplied(6, 8, 16, 215),
     );
     painter.rect_stroke(
         map_rect,
-        6.0,
-        egui::Stroke::new(1.0, egui::Color32::from_gray(80)),
+        7.0,
+        egui::Stroke::new(1.0, egui::Color32::from_rgb(50, 60, 95)),
         egui::StrokeKind::Inside,
     );
 
@@ -562,15 +655,15 @@ fn draw_minimap(
 
 fn draw_overlay(painter: &egui::Painter, rect: egui::Rect, viewport: Viewport, name: &str) {
     let overlay = egui::Rect::from_min_size(
-        rect.min + egui::vec2(16.0, rect.height() - 40.0),
-        egui::vec2(320.0, 24.0),
+        rect.min + egui::vec2(14.0, rect.height() - 32.0),
+        egui::vec2(380.0, 20.0),
     );
     painter.text(
         overlay.min,
         egui::Align2::LEFT_TOP,
-        format!("Dimension: {name}   ·   Zoom: {:.0}%", viewport.zoom * 100.0),
-        egui::FontId::monospace(12.0),
-        egui::Color32::from_gray(170),
+        format!("{}  •  {:.0}%", name, viewport.zoom * 100.0),
+        egui::FontId::monospace(11.0),
+        egui::Color32::from_rgb(160, 170, 200),
     );
 }
 

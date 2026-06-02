@@ -4,9 +4,11 @@ Run and iterate on the shell prototype while Redox integration is in progress.
 
 **Related:** [PHASES.md](PHASES.md) · [smart-objects.md](smart-objects.md) · [persistence.md](persistence.md) · [redox-roadmap.md](redox-roadmap.md)
 
-Implemented in this build (and latest iteration): resize handles (canvas + inspector), basic Link navigation + target setting in inspector, demo Link prewired, accent header polish on objects, dynamic starfield for hyperspace immersion, Link as glowing portals, Agents with neural glow for liveness.
+Implemented (major GUI modernization): Deep space neon theme, rich starfield + nebulae background, premium glassmorphic Smart Object cards (shadows, layered bodies, icons + kind badges, neon glow on select, portal Links, glowing Agents), modern top menubar (Workspaces/Objects/System/AI sections), polished glass HUD + Inspector panels, bottom dock/taskbar. See DEVELOPMENT-LOG "GUI Modernization" entry and the high-end reference image provided by user.
 
-Still documented targets: full object linking polish (visual connections), Redox VM, local inference, deeper Smart Object behaviors (nesting, reactivity).
+Previous: resize, basic linking, etc.
+
+Still documented targets: visual link connections, richer object content, Redox native shell, deeper AI behaviors.
 
 ---
 
