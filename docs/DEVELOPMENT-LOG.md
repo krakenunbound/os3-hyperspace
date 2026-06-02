@@ -529,6 +529,13 @@ The vision (from README, PHASES, ARCHITECTURE, smart-objects.md):
 - `git add -A ... ; git commit -m "long..." ; git push`
 - Multiple read_file / grep / list_dir / run_terminal for state capture before editing.
 
+**GitHub sync (per user request "Also keep the github up to date"):**
+- Ran `git status --porcelain`, `git log --oneline -5`, `git remote -v` to inspect.
+- Explicit `git push origin main` confirmed "Everything up-to-date".
+- Remote (https://github.com/krakenunbound/os3-hyperspace) now fully reflects the latest commit b27135b + all GUI polish (energy streaks, working window chrome with close button, richer demo content), heavy docs (this log entry at top), and previous work.
+- No uncommitted changes; working tree clean. This keeps the public skeleton in sync so others (or future sessions) see the current state of the prototype + full documentation trail.
+- Will repeat push after any future doc/code updates in the session.
+
 **Session tools used for rigor:** todo_write (multiple times), many read_file (offset/limit for precision), grep (pattern for features across whole tree), list_dir, run_terminal_command (git, cargo with pwsh-safe syntax), search_replace (precise), write (for this log), use_tool for GH MCP + shellx git MCP.
 
 This session took the prototype from "basic objects on canvas" to "resizable, link-navigable multidimensional workspace". Feels much closer to the "AI-native multidimensional OS" vision.
