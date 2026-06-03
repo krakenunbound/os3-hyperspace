@@ -38,7 +38,7 @@ What makes macOS *feel* premium, mapped to concrete shell work:
 | Fluidity | Spring animations, momentum scroll/zoom | ⬜ animated zoom-to-fit & dimension cross-fade; momentum pan |
 | Precision | Pixel-snapped text, consistent radii & spacing | ⬜ unify corner radii via theme tokens; pixel-snap labels |
 | Affordance | Cursors change to match action | ✅ resize cursors on handles (done) |
-| Spotlight | One box to find/launch/do anything | ⬜ **command palette** (⌘K) — highest-leverage next step |
+| Spotlight | One box to find/launch/do anything | ✅ **command palette** (⌘K) — fuzzy search, keyboard-complete |
 | Mission Control | Zoom out to see everything | 🟡 minimap + **Fit to content** (F) done; ⬜ animated overview |
 | Quietness | Restraint in color & chrome | 🟡 tune neon down a notch for long sessions; light theme |
 
@@ -48,12 +48,14 @@ What makes macOS *feel* premium, mapped to concrete shell work:
 
 Ordered by leverage. Each is a self-contained, shippable slice.
 
-### 3.1 Command Palette (⌘K / Ctrl+K) — *do this first*
-A single fuzzy-searchable box, Spotlight-style, that can: spawn any object, switch/create
-dimensions, run AI prompts, fit view, save, toggle panels. This is the keyboard-complete
-backbone — every new feature registers one command and is instantly discoverable.
-*Why first:* it turns scattered buttons into one coherent, scalable surface and is the
-clearest "macOS feel" win.
+### 3.1 Command Palette (⌘K / Ctrl+K) — ✅ shipped
+A single fuzzy-searchable box, Spotlight-style, that can: spawn any object (at the view
+centre), switch/create dimensions, run AI prompts, fit view, save, toggle panels, delete
+selection. The keyboard-complete backbone — every new feature registers one `Command` and
+is instantly discoverable. Implemented in `crates/hyperspace-shell/src/palette.rs` using a
+data-only `CommandAction` enum the app interprets (no callbacks fighting the borrow checker).
+**Next within this slice:** recent/frequent ordering, inline arguments (e.g. "rename →"),
+and exposing the same registry to the AI so it can *act* through the palette.
 
 ### 3.2 Fluid camera
 - Animated **zoom-to-fit** and **zoom-to-selection** (ease-out spring) instead of a jump.
@@ -83,6 +85,7 @@ clearest "macOS feel" win.
 
 Concrete steps toward the vision, shipped alongside this doc:
 
+- **Command Palette (⌘K)** — Spotlight-style fuzzy launcher; the keyboard-complete spine (see §3.1).
 - **Resize & close actually work** — fixed a coordinate-space bug where hit zones were
   offset from where handles/buttons were drawn (see DEVELOPMENT-LOG).
 - **Resize cursors** appear when hovering a selected object's corner (affordance).

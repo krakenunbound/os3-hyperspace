@@ -78,9 +78,20 @@ First build downloads dependencies (~430 crates); subsequent builds are fast.
 
 | Key | Action |
 |-----|--------|
+| **⌘K / Ctrl+K** | Open/close the **Command Palette** (Spotlight-style: search + run any command) |
+| **F** | Fit the view to the active dimension's content |
 | **Ctrl+S** | Save workspace |
 | **Delete** | Remove selected object (only when not typing in Inspector) |
-| **Escape** | Clear selection |
+| **Escape** | Clear selection (or close the palette if open) |
+
+#### Command Palette (⌘K)
+
+The fastest way to do anything. Open with ⌘K/Ctrl+K (or the dock's **⌘ Commands** button),
+type to fuzzy-search, **↑/↓** to move, **↵** to run, **Esc** or click-outside to dismiss.
+Commands include: spawn any object (at the view centre), new workspace, fit view, save,
+toggle side panel, ping/ask the local agent, delete selected, and "Go to Workspace: …" for
+each other dimension. New features should register here first — it's the keyboard-complete
+spine of the shell (see [ux-vision.md](ux-vision.md)).
 
 ### Top bar
 

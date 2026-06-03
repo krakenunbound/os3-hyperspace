@@ -1,5 +1,6 @@
 mod app;
 mod canvas;
+mod palette;
 mod theme;
 
 use app::HyperspaceApp;

@@ -25,6 +25,7 @@ use hyperspace_ai::{AgentMessage, AgentRuntime, LocalAgentRuntime};
 use hyperspace_fs::{InMemoryObjectStore, JsonWorkspaceStore, ObjectStore};
 
 use crate::canvas::{self, CanvasEvent, CanvasInteraction};
+use crate::palette::{Command, CommandAction, CommandPalette};
 use crate::theme;
 
 const GRID_SNAP: f32 = 20.0;
@@ -35,6 +36,7 @@ pub struct HyperspaceApp {
     workspace_store: JsonWorkspaceStore,
     agent_runtime: LocalAgentRuntime,
     canvas: CanvasInteraction,
+    palette: CommandPalette,
     selected_object: Option<SmartObjectId>,
     new_dimension_name: String,
     status: String,
@@ -63,6 +65,7 @@ impl HyperspaceApp {
             workspace_store,
             agent_runtime: LocalAgentRuntime::new(),
             canvas: CanvasInteraction::default(),
+            palette: CommandPalette::default(),
             selected_object: None,
             new_dimension_name: String::new(),
             status,
@@ -89,6 +92,87 @@ impl HyperspaceApp {
         self.sync_active_dimension();
         self.mark_dirty();
         self.status = format!("Created workspace '{name}'");
+    }
+
+    /// World point at the centre of the visible canvas for the active dimension.
+    /// `world_to_screen(centre) == screen_centre` when `pan == -centre`, so the visible
+    /// centre in world space is simply `-pan`. Used to spawn objects where the user is looking.
+    fn active_view_center(&self) -> WorldPoint {
+        self.state
+            .active_dimension()
+            .map(|d| WorldPoint::new(-d.viewport.pan_x, -d.viewport.pan_y))
+            .unwrap_or_else(|| WorldPoint::new(0.0, 0.0))
+    }
+
+    /// Build the command registry shown in the palette. Rebuilt each frame the palette is
+    /// open so workspace-switch entries reflect the current set of dimensions.
+    fn build_commands(&self) -> Vec<Command> {
+        let mut cmds = vec![
+            Command::new("📝", "Spawn Note", "Object", CommandAction::Spawn(ObjectKind::Note)),
+            Command::new("🚀", "Spawn App", "Object", CommandAction::Spawn(ObjectKind::App)),
+            Command::new("📁", "Spawn Folder", "Object", CommandAction::Spawn(ObjectKind::Folder)),
+            Command::new("🧠", "Spawn Agent", "Object", CommandAction::Spawn(ObjectKind::Agent)),
+            Command::new("🌀", "Spawn Link", "Object", CommandAction::Spawn(ObjectKind::Link)),
+            Command::new("✨", "New Workspace", "Workspace", CommandAction::CreateDimension),
+            Command::new("🔭", "Fit View to Content", "View", CommandAction::FitToContent),
+            Command::new("💾", "Save Workspace", "System", CommandAction::Save),
+            Command::new("🪟", "Toggle Side Panel", "View", CommandAction::ToggleHud),
+            Command::new("💬", "Ask AI about this Dimension", "AI", CommandAction::AskAiDimension),
+            Command::new("📡", "Ping Local Agent", "AI", CommandAction::PingAgent),
+            Command::new("🗑", "Delete Selected Object", "Object", CommandAction::DeleteSelected),
+            Command::new("ℹ", "About OS/3 Hyperspace", "System", CommandAction::About),
+        ];
+
+        // One "switch to" command per other dimension.
+        for dim in &self.state.dimensions {
+            if dim.id != self.state.active_dimension {
+                cmds.push(Command::new(
+                    "→",
+                    format!("Go to Workspace: {}", dim.name),
+                    "Workspace",
+                    CommandAction::SwitchDimension(dim.id),
+                ));
+            }
+        }
+        cmds
+    }
+
+    /// Interpret a [`CommandAction`] chosen in the palette.
+    fn run_command_action(&mut self, action: CommandAction) {
+        match action {
+            CommandAction::Spawn(kind) => {
+                let at = self.active_view_center();
+                self.spawn_object(kind, at);
+            }
+            CommandAction::CreateDimension => self.create_dimension(),
+            CommandAction::SwitchDimension(id) => self.switch_dimension(id),
+            CommandAction::FitToContent => self.pending_fit = true,
+            CommandAction::Save => self.save_workspace(),
+            CommandAction::ToggleHud => {
+                self.show_hud = !self.show_hud;
+                self.status = if self.show_hud { "Side panel shown" } else { "Side panel hidden" }.into();
+            }
+            CommandAction::AskAiDimension => {
+                let prompt = self
+                    .state
+                    .active_dimension()
+                    .map(|d| format!("Describe dimension '{}'", d.name))
+                    .unwrap_or_else(|| "Describe the workspace".into());
+                match self.agent_runtime.complete(AgentMessage::user(prompt)) {
+                    Ok(reply) => self.status = reply.text,
+                    Err(err) => self.status = err.to_string(),
+                }
+            }
+            CommandAction::PingAgent => match self.agent_runtime.ping() {
+                Ok(reply) => self.status = reply,
+                Err(err) => self.status = err.to_string(),
+            },
+            CommandAction::DeleteSelected => self.delete_selected(),
+            CommandAction::About => {
+                self.status =
+                    "OS/3 Hyperspace — AI-native multidimensional prototype. Press ⌘K for commands.".into();
+            }
+        }
     }
 
     fn active_dimension_id(&self) -> DimensionId {
@@ -163,6 +247,16 @@ impl HyperspaceApp {
     }
 
     fn handle_shortcuts(&mut self, ctx: &egui::Context) {
+        // ⌘K / Ctrl+K toggles the command palette (checked first; it owns the keyboard while open).
+        if ctx.input(|i| i.modifiers.command && i.key_pressed(egui::Key::K)) {
+            self.palette.toggle();
+        }
+        // While the palette is open it handles its own keys (esc/enter/arrows) — don't run
+        // the canvas shortcuts underneath it.
+        if self.palette.open {
+            return;
+        }
+
         let typing = ctx.wants_keyboard_input();
 
         ctx.input(|input| {
@@ -235,9 +329,8 @@ impl HyperspaceApp {
 
                 // "Objects" / spawn quick access (like Apps in the mockup)
                 ui.label(egui::RichText::new("Objects").small().color(egui::Color32::from_rgb(170, 180, 210)));
-                if ui.button("Spawn").clicked() {
-                    // Could open a popup in future; for now just hint
-                    self.status = "Use left HUD Spawn buttons (or double-click canvas for Note)".into();
+                if ui.button("Spawn").on_hover_text("Open command palette (⌘K)").clicked() {
+                    self.palette.toggle();
                 }
 
                 ui.separator();
@@ -364,8 +457,14 @@ impl HyperspaceApp {
                 .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 50, 90))))
             .show(ctx, |ui| {
                 ui.horizontal_centered(|ui| {
-                    ui.label(egui::RichText::new("⌘").small());
-                    ui.label(egui::RichText::new("Quick Dock").small().color(egui::Color32::from_rgb(150, 160, 190)));
+                    if ui
+                        .button(egui::RichText::new("⌘  Commands").color(egui::Color32::from_rgb(210, 190, 255)))
+                        .on_hover_text("Open the command palette (⌘K / Ctrl+K)")
+                        .clicked()
+                    {
+                        self.palette.toggle();
+                    }
+                    ui.label(egui::RichText::new("⌘K").small().color(egui::Color32::from_rgb(110, 120, 150)));
                     ui.add_space(12.0);
 
                     if ui.button("New Note").clicked() {
@@ -518,6 +617,13 @@ impl HyperspaceApp {
 impl eframe::App for HyperspaceApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_shortcuts(ctx);
+
+        // Command palette (⌘K) — renders as a top overlay; runs the chosen action.
+        let commands = self.build_commands();
+        if let Some(action) = self.palette.show(ctx, &commands) {
+            self.run_command_action(action);
+        }
+
         self.top_bar(ctx);
         self.side_panel(ctx);
         self.inspector_panel(ctx);

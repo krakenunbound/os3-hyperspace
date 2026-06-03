@@ -14,6 +14,35 @@
 
 ---
 
+## 2026-06-03 Command Palette (⌘K) — the keyboard-complete spine ("Spotlight for OS/3")
+
+**Context / Why this work:**
+- User: "You are under no obligation to build upon what has come before… start over if that is the best course. WE are having fun with this."
+- Decision: **not** a rewrite. The foundation (viewport math, persistence, Smart Object model) is sound and the recent bug-fix pass made it feel right. The missing thing that makes it feel like *an OS* is a single, fast, keyboard-driven way to do anything. So I built the highest-leverage item from ux-vision.md §3.1: the Command Palette.
+
+**What shipped:**
+- **New module `crates/hyperspace-shell/src/palette.rs`** — a Spotlight-style overlay:
+  - `Command { icon, title, badge, action }` registry + a **data-only `CommandAction` enum** the app interprets. This deliberately avoids storing callbacks (which fight the borrow checker against `&mut HyperspaceApp`): `show()` returns the chosen `CommandAction`, the app runs it.
+  - Lightweight **fuzzy matcher** (`fuzzy_score`): subsequence match with bonuses for first-char / word-start / consecutive runs, and a mild shorter-title preference. Empty query preserves registry order. 3 unit tests.
+  - **UX**: dim full-screen backdrop (click-outside dismisses), centered glass card with shadow + purple border, auto-focused search field, **↑/↓** to move (wraps), **↵** to run, **Esc** to close, hover/selection row highlight, scroll-to-selected.
+- **Wiring in `app.rs`:**
+  - `palette: CommandPalette` field; ⌘K / Ctrl+K toggles it in `handle_shortcuts` (palette owns the keyboard while open — other shortcuts early-return).
+  - `build_commands()` rebuilt each frame so "Go to Workspace: …" entries reflect current dimensions. Static commands: spawn each ObjectKind, new workspace, fit view, save, toggle side panel, ask-AI-about-dimension, ping agent, delete selected, about.
+  - `run_command_action()` interprets the enum. Spawns happen at `active_view_center()` (= `-pan`, the visible canvas centre) so objects appear where you're looking.
+  - Discoverability: dock now has a **⌘ Commands** button (+ "⌘K" hint); top-bar **Spawn** opens the palette.
+
+**Key code locations:**
+- `palette.rs`: `CommandPalette::show` (overlay + nav + filter), `fuzzy_score`, `row`.
+- `app.rs`: `build_commands`, `run_command_action`, `active_view_center`, ⌘K handling in `handle_shortcuts`, palette `show` call near the top of `update`.
+
+**How to test:**
+1. `cargo test --workspace` — 8 tests pass (viewport roundtrip, 2 fs, 2 fit, 3 palette fuzzy).
+2. `cargo run -p hyperspace-shell`: press ⌘K/Ctrl+K → type "note" ↵ (spawns a Note at view centre); "fit" ↵ (frames content); "go to" → switch workspace; Esc / click-outside closes.
+
+**Status / next (per ux-vision.md):** Palette is the spine now. Next slices: animated (spring) camera for fit/zoom-to-selection and dimension cross-fades; then expose the command registry to the AI so it can *act*.
+
+---
+
 ## 2026-06-03 Bug Hunt + UX Vision: Fix Resize/Close Hit-Testing, Dock Occlusion, Create-Dimension; add Fit-to-Content, Resize Cursors, UX Vision doc
 
 **Context / Why this work:**
