@@ -16,6 +16,7 @@ Current: Phase 0 (prototype running) with early Phase 2 shell features done.
 
 | Doc | Purpose |
 |-----|---------|
+| [ux-vision.md](ux-vision.md) | UX design spine — "macOS beauty, Linux power": principles, polish checklist, leverage-ordered roadmap |
 | [smart-objects.md](smart-objects.md) | Smart Object types, interaction, future behavior (Note, App, Folder, Agent, Link) |
 | [persistence.md](persistence.md) | JSON schema, paths, save triggers, future Hyperspace FS |
 | [ai-runtime.md](ai-runtime.md) | Stub today, local inference plan |

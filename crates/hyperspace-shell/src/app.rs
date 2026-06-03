@@ -17,7 +17,8 @@
 
 use eframe::egui;
 use hyperspace_core::{
-    DimensionId, HyperspaceState, ObjectKind, SmartObject, SmartObjectId, WorldPoint, WorldSize,
+    DimensionId, HyperspaceState, ObjectKind, SmartObject, SmartObjectId, Viewport, WorldPoint,
+    WorldSize,
 };
 use hyperspace_ai::{AgentMessage, AgentRuntime, LocalAgentRuntime};
 
@@ -39,6 +40,9 @@ pub struct HyperspaceApp {
     status: String,
     show_hud: bool,
     dirty: bool,
+    /// Deferred "fit canvas to content" request — applied in the CentralPanel where the
+    /// live canvas size is known (set from the dock button or the `F` shortcut).
+    pending_fit: bool,
 }
 
 impl HyperspaceApp {
@@ -64,7 +68,27 @@ impl HyperspaceApp {
             status,
             show_hud: true,
             dirty: false,
+            pending_fit: false,
         }
+    }
+
+    /// Create a new Dimension (workspace) from `new_dimension_name`, falling back to an
+    /// auto-generated name. `add_dimension` makes it the active dimension.
+    fn create_dimension(&mut self) {
+        let name = {
+            let trimmed = self.new_dimension_name.trim();
+            if trimmed.is_empty() {
+                format!("Dimension {}", self.state.dimensions.len() + 1)
+            } else {
+                trimmed.to_string()
+            }
+        };
+        self.state.add_dimension(name.clone());
+        self.new_dimension_name.clear();
+        self.selected_object = None;
+        self.sync_active_dimension();
+        self.mark_dirty();
+        self.status = format!("Created workspace '{name}'");
     }
 
     fn active_dimension_id(&self) -> DimensionId {
@@ -151,6 +175,11 @@ impl HyperspaceApp {
                 self.delete_selected();
             }
 
+            // F — fit the canvas to the dimension's content (applied next frame in CentralPanel).
+            if !typing && input.key_pressed(egui::Key::F) {
+                self.pending_fit = true;
+            }
+
             if input.modifiers.command && input.key_pressed(egui::Key::S) {
                 self.save_workspace();
             }
@@ -183,6 +212,23 @@ impl HyperspaceApp {
                     if ui.selectable_label(selected, text).clicked() {
                         self.switch_dimension(id);
                     }
+                }
+
+                // Create a new workspace (Dimension). Uses `new_dimension_name`; Enter or ＋ submits.
+                let name_resp = ui.add(
+                    egui::TextEdit::singleline(&mut self.new_dimension_name)
+                        .hint_text("New workspace…")
+                        .desired_width(110.0),
+                );
+                let submit_via_enter =
+                    name_resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                if ui
+                    .button("＋")
+                    .on_hover_text("Create workspace (Dimension)")
+                    .clicked()
+                    || submit_via_enter
+                {
+                    self.create_dimension();
                 }
 
                 ui.separator();
@@ -305,6 +351,46 @@ impl HyperspaceApp {
                 if let Ok(entries) = self.store.list_active(self.active_dimension_id()) {
                     ui.label(egui::RichText::new(format!("{} objects in active dimension", entries.len())).small());
                 }
+            });
+    }
+
+    fn bottom_dock(&mut self, ctx: &egui::Context) {
+        // Bottom dock / taskbar — modern OS feel (quick actions + active dimension indicator).
+        // Declared as a sibling panel BEFORE the CentralPanel so it reserves its own strip and
+        // does NOT paint over the canvas (previously it occluded the minimap + zoom overlay).
+        egui::TopBottomPanel::bottom("dock")
+            .frame(egui::Frame::default()
+                .fill(egui::Color32::from_rgb(6, 8, 16))
+                .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 50, 90))))
+            .show(ctx, |ui| {
+                ui.horizontal_centered(|ui| {
+                    ui.label(egui::RichText::new("⌘").small());
+                    ui.label(egui::RichText::new("Quick Dock").small().color(egui::Color32::from_rgb(150, 160, 190)));
+                    ui.add_space(12.0);
+
+                    if ui.button("New Note").clicked() {
+                        if let Some(dim) = self.state.active_dimension_mut() {
+                            let pos = WorldPoint::new(-dim.viewport.pan_x, -dim.viewport.pan_y);
+                            let obj = SmartObject::note("Quick Note", snap_point(pos)).with_body("Created from dock");
+                            self.selected_object = Some(obj.id);
+                            dim.objects.push(obj);
+                            self.mark_dirty();
+                            self.sync_active_dimension();
+                        }
+                    }
+                    if ui.button("Fit to content").clicked() {
+                        self.pending_fit = true;
+                    }
+                    if ui.button("AI Chat").clicked() {
+                        self.status = "Use left HUD 'Ask about this dimension' for now.".into();
+                    }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.label(egui::RichText::new(format!("Dim: {}", self.state.active_dimension().map(|d| d.name.as_str()).unwrap_or("?"))).small().color(egui::Color32::from_rgb(140, 150, 180)));
+                        ui.add_space(8.0);
+                        ui.label(egui::RichText::new("OS/3 Hyperspace • Local-first").small().color(egui::Color32::from_rgb(100, 110, 140)));
+                    });
+                });
             });
     }
 
@@ -435,12 +521,22 @@ impl eframe::App for HyperspaceApp {
         self.top_bar(ctx);
         self.side_panel(ctx);
         self.inspector_panel(ctx);
+        self.bottom_dock(ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let screen_size = WorldSize {
                 width: ui.available_width(),
                 height: ui.available_height(),
             };
+
+            // Apply a deferred "fit to content" now that we know the live canvas size.
+            if self.pending_fit {
+                self.pending_fit = false;
+                if let Some(dimension) = self.state.active_dimension_mut() {
+                    fit_viewport_to_content(&mut dimension.viewport, &dimension.objects, screen_size);
+                    self.status = "Fit view to content".into();
+                }
+            }
 
             let mut pending_agent_prompt: Option<String> = None;
             let mut pending_link_nav: Option<DimensionId> = None;
@@ -544,39 +640,6 @@ impl eframe::App for HyperspaceApp {
                 canvas::draw_canvas(ui, dimension, screen_size, selected_object);
             }
 
-            // Bottom dock / taskbar — modern OS feel like the reference image
-            // (quick actions, search hint, active dimension indicator). Glassy dark with neon accents.
-            egui::TopBottomPanel::bottom("dock")
-                .frame(egui::Frame::default()
-                    .fill(egui::Color32::from_rgb(6, 8, 16))
-                    .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 50, 90))))
-                .show(ctx, |ui| {
-                    ui.horizontal_centered(|ui| {
-                        ui.label(egui::RichText::new("⌘").small());
-                        ui.label(egui::RichText::new("Quick Dock").small().color(egui::Color32::from_rgb(150, 160, 190)));
-                        ui.add_space(12.0);
-
-                        if ui.button("New Note").clicked() {
-                            if let Some(dim) = self.state.active_dimension_mut() {
-                                let pos = WorldPoint::new(dim.viewport.pan_x + 80.0, dim.viewport.pan_y + 60.0);
-                                let obj = SmartObject::note("Quick Note", pos).with_body("Created from dock");
-                                dim.objects.push(obj);
-                                self.mark_dirty();
-                                self.sync_active_dimension();
-                            }
-                        }
-                        if ui.button("AI Chat").clicked() {
-                            self.status = "Use left HUD 'Ask about this dimension' for now.".into();
-                        }
-
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.label(egui::RichText::new(format!("Dim: {}", self.state.active_dimension().map(|d| d.name.as_str()).unwrap_or("?"))).small().color(egui::Color32::from_rgb(140, 150, 180)));
-                            ui.add_space(8.0);
-                            ui.label(egui::RichText::new("OS/3 Hyperspace • Local-first").small().color(egui::Color32::from_rgb(100, 110, 140)));
-                        });
-                    });
-                });
-
             self.selected_object = selected_object;
             if let Some(status) = status_update {
                 self.status = status;
@@ -622,4 +685,71 @@ fn snap_point(point: WorldPoint) -> WorldPoint {
         (point.x / GRID_SNAP).round() * GRID_SNAP,
         (point.y / GRID_SNAP).round() * GRID_SNAP,
     )
+}
+
+/// Center + zoom a viewport so every object in the dimension fits on screen, with margin.
+/// No-op for empty dimensions or a zero-sized canvas. Zoom is clamped to the viewport limits.
+fn fit_viewport_to_content(viewport: &mut Viewport, objects: &[SmartObject], screen: WorldSize) {
+    if objects.is_empty() || screen.width <= 0.0 || screen.height <= 0.0 {
+        return;
+    }
+
+    let (mut min_x, mut min_y, mut max_x, mut max_y) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
+    for o in objects {
+        min_x = min_x.min(o.position.x);
+        min_y = min_y.min(o.position.y);
+        max_x = max_x.max(o.position.x + o.size.width);
+        max_y = max_y.max(o.position.y + o.size.height);
+    }
+
+    let margin = 80.0;
+    let content_w = (max_x - min_x).max(1.0) + margin * 2.0;
+    let content_h = (max_y - min_y).max(1.0) + margin * 2.0;
+    let zoom = (screen.width / content_w)
+        .min(screen.height / content_h)
+        .clamp(Viewport::MIN_ZOOM, Viewport::MAX_ZOOM);
+
+    // world_to_screen(center) = (center + pan) * zoom + screen_center; set pan = -center so the
+    // content centroid lands at the screen centre.
+    viewport.zoom = zoom;
+    viewport.pan_x = -(min_x + max_x) * 0.5;
+    viewport.pan_y = -(min_y + max_y) * 0.5;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fit_centers_content_on_screen() {
+        let screen = WorldSize { width: 1000.0, height: 800.0 };
+        let objects = vec![
+            SmartObject::note("a", WorldPoint::new(100.0, 200.0)),
+            SmartObject::note("b", WorldPoint::new(600.0, 500.0)),
+        ];
+        let mut viewport = Viewport::default();
+        fit_viewport_to_content(&mut viewport, &objects, screen);
+
+        // Content centroid should map to the screen centre.
+        let (mut min_x, mut min_y, mut max_x, mut max_y) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
+        for o in &objects {
+            min_x = min_x.min(o.position.x);
+            min_y = min_y.min(o.position.y);
+            max_x = max_x.max(o.position.x + o.size.width);
+            max_y = max_y.max(o.position.y + o.size.height);
+        }
+        let centroid = WorldPoint::new((min_x + max_x) * 0.5, (min_y + max_y) * 0.5);
+        let mapped = viewport.world_to_screen(centroid, screen);
+        assert!((mapped.x - screen.width * 0.5).abs() < 0.001);
+        assert!((mapped.y - screen.height * 0.5).abs() < 0.001);
+        assert!(viewport.zoom > 0.0 && viewport.zoom <= Viewport::MAX_ZOOM);
+    }
+
+    #[test]
+    fn fit_is_noop_when_empty() {
+        let mut viewport = Viewport { pan_x: 5.0, pan_y: 6.0, zoom: 1.5 };
+        fit_viewport_to_content(&mut viewport, &[], WorldSize { width: 800.0, height: 600.0 });
+        assert_eq!(viewport.pan_x, 5.0);
+        assert_eq!(viewport.zoom, 1.5);
+    }
 }

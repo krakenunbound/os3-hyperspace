@@ -119,17 +119,19 @@ impl CanvasInteraction {
 
                 if let Some(object) = hit_test(objects, world) {
                     // Check for close button hit on the currently selected object's titlebar chrome
-                    // (makes selected Smart Objects feel like real closable windows from the reference mockup)
+                    // (makes selected Smart Objects feel like real closable windows from the reference mockup).
+                    // NOTE: hit testing happens in canvas-local coords (matching `screen` = pointer - rect.min),
+                    // so we build the object rect with a ZERO origin. Using rect.min here was a bug: it put the
+                    // hit zone in global screen coords, offset from the pointer by the central panel origin.
                     let is_selected = selected == Some(object.id);
                     if is_selected {
-                        let screen_rect = object_screen_rect(object, viewport, screen_size, rect.min);
-                        let header_h = 22.0_f32;
-                        let ctrl_zone = egui::Rect::from_min_max(
-                            egui::pos2(screen_rect.max.x - 50.0, screen_rect.min.y),
-                            egui::pos2(screen_rect.max.x, screen_rect.min.y + header_h),
+                        let local_rect = object_local_rect(object, *viewport, screen_size);
+                        // Tight zone around just the close (×) glyph so minimize/maximize don't also close.
+                        let close_rect = egui::Rect::from_center_size(
+                            egui::pos2(local_rect.max.x - 8.0, local_rect.min.y + 8.0),
+                            egui::vec2(18.0, 18.0),
                         );
-                        if ctrl_zone.contains(egui::pos2(screen.x, screen.y)) {
-                            // Clicked in the chrome control area — treat as close (X is rightmost)
+                        if close_rect.contains(egui::pos2(screen.x, screen.y)) {
                             events.push(CanvasEvent::CloseObject(object.id));
                             return events; // don't also select
                         }
@@ -155,7 +157,8 @@ impl CanvasInteraction {
                 // Priority: resize handles on the currently selected object
                 if let Some(sel_id) = selected {
                     if let Some(obj) = objects.iter().find(|o| o.id == sel_id) {
-                        if let Some(corner) = hit_resize_handle(obj, screen, viewport, screen_size, rect.min) {
+                        // Hit test in canvas-local coords (ZERO origin) to match `screen`.
+                        if let Some(corner) = hit_resize_handle(obj, screen, viewport, screen_size, egui::Pos2::ZERO) {
                             self.resizing = Some((
                                 sel_id,
                                 corner,
@@ -222,8 +225,38 @@ impl CanvasInteraction {
             self.resizing = None;
         }
 
+        // Cursor affordance: show directional resize cursors when hovering a selected
+        // object's corner handle (mac-like feedback that the handle is grabbable).
+        if self.resizing.is_none() && self.dragging_object.is_none() && !self.space_pan {
+            if let (Some(sel_id), Some(hover)) = (selected, ui.input(|i| i.pointer.hover_pos())) {
+                if let Some(obj) = objects.iter().find(|o| o.id == sel_id) {
+                    let local = WorldPoint::new(hover.x - rect.min.x, hover.y - rect.min.y);
+                    if let Some(corner) =
+                        hit_resize_handle(obj, local, viewport, screen_size, egui::Pos2::ZERO)
+                    {
+                        let icon = match corner {
+                            ResizeCorner::TopLeft | ResizeCorner::BottomRight => {
+                                egui::CursorIcon::ResizeNwSe
+                            }
+                            ResizeCorner::TopRight | ResizeCorner::BottomLeft => {
+                                egui::CursorIcon::ResizeNeSw
+                            }
+                        };
+                        ui.output_mut(|o| o.cursor_icon = icon);
+                    }
+                }
+            }
+        }
+
         events
     }
+}
+
+/// Object rect in canvas-local screen coords (origin at the canvas top-left).
+/// Matches the pointer coords used for hit testing (`pointer - rect.min`), so it must
+/// NOT add the global panel origin. Drawing uses [`object_screen_rect`] with `rect.min`.
+fn object_local_rect(object: &SmartObject, viewport: Viewport, screen_size: WorldSize) -> egui::Rect {
+    object_screen_rect(object, &viewport, screen_size, egui::Pos2::ZERO)
 }
 
 fn hit_test(objects: &[SmartObject], point: WorldPoint) -> Option<&SmartObject> {
@@ -273,7 +306,7 @@ fn draw_starfield(
             let mut y = start_y;
             while y < end_y {
                 // Simple "hash" for slight variation per position (no floating rand).
-                let hash = ((x * 12.9898 + y * 78.233).sin() * 43758.5453).fract();
+                let hash = ((x * 12.9898 + y * 78.233).sin() * 43758.547).fract();
                 let jitter_x = (hash - 0.5) * step * 0.3;
                 let jitter_y = ((hash * 1.3).fract() - 0.5) * step * 0.3;
 

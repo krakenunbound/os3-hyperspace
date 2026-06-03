@@ -14,6 +14,39 @@
 
 ---
 
+## 2026-06-03 Bug Hunt + UX Vision: Fix Resize/Close Hit-Testing, Dock Occlusion, Create-Dimension; add Fit-to-Content, Resize Cursors, UX Vision doc
+
+**Context / Why this work:**
+- User: (1) "look for bugs" (2) "imagine a better user experience GUI. We are aiming at MacOS beauty but the power of linux or better."
+- Reviewed the whole workspace (core, fs, ai, shell). `cargo check/clippy/test` all pass on Linux. Found several real bugs in the shell's input handling + panel layout, plus one dead field / missing feature.
+
+**Bugs found & fixed (all in `crates/hyperspace-shell/`):**
+1. **Resize handles unusable — coordinate-space mismatch** (`canvas.rs`). `hit_resize_handle` built the object's screen rect with `origin = rect.min` (global egui coords) but compared it against a *canvas-local* pointer (`pointer - rect.min`). The grab zone was offset from the drawn handle by the central-panel origin (~260px right / ~40px down with the HUD shown), so resize effectively never triggered where the handle appears. Fix: hit-test in canvas-local space via a new `object_local_rect` helper (ZERO origin); drawing still uses `rect.min`.
+2. **Close (×) button broken the same way** (`canvas.rs`). Same global-vs-local mismatch on the titlebar close zone. Fixed to local coords.
+3. **Close zone swallowed minimize/maximize** (`canvas.rs`). The old 50px-wide `ctrl_zone` covered all three chrome buttons, so clicking − or □ closed the object. Narrowed to a tight 18px box around the × glyph only.
+4. **Bottom dock occluded the minimap + zoom overlay** (`app.rs`). `TopBottomPanel::bottom("dock")` was created *inside* the `CentralPanel` closure, after the canvas had claimed full height, so it painted over the bottom of the canvas. Fix: extracted `bottom_dock()` and declared it as a sibling panel *before* `CentralPanel` (correct egui panel ordering).
+5. **Dock "New Note" spawned off-screen** (`app.rs`). Used `pan + 80` (wrong direction/space). The visible canvas centre in world space is `-pan`, so it now spawns at `-pan` (snapped) and selects the new note.
+6. **Dead field / missing feature** (`app.rs`). `new_dimension_name` was never read and there was no UI to create a Dimension (despite PHASES claiming "create new"). Wired up a top-bar "New workspace…" field + ＋ button (Enter also submits) → `create_dimension()` → `HyperspaceState::add_dimension`.
+7. **Clippy: excessive float precision** (`canvas.rs`). `43758.5453` → `43758.547` (f32-representable).
+
+**UX improvements shipped (first iteration toward "macOS beauty, Linux power"):**
+- **Resize cursors**: hovering a selected object's corner shows `ResizeNwSe`/`ResizeNeSw` (affordance feedback).
+- **Fit to content**: `F` key or a dock button frames the whole dimension. New pure fn `fit_viewport_to_content` (centroid → screen centre, clamped zoom) with 2 unit tests. This is the seed of the planned fluid-camera work.
+- **Create workspaces** from the UI (see bug 6) — the spatial model is now expandable without code.
+- **[docs/ux-vision.md](ux-vision.md)** — new design spine: principles, a macOS-polish checklist mapped to concrete work, and a leverage-ordered roadmap (Command Palette ⌘K is flagged as the highest-leverage next step).
+
+**Key code locations:**
+- `canvas.rs`: `object_local_rect` (new helper), close-zone + `hit_resize_handle` call sites now use ZERO origin, cursor-affordance block at end of `handle_input`.
+- `app.rs`: `bottom_dock()`, `create_dimension()`, `fit_viewport_to_content()` + `#[cfg(test)] mod tests`, `pending_fit` field, `F` shortcut, top-bar create-workspace UI.
+
+**How to test:**
+1. `cargo test --workspace` (5 tests pass: viewport roundtrip, 2 fs workspace, 2 fit).
+2. `cargo run -p hyperspace-shell`: select an object → drag a corner (now resizes; cursor changes on hover) → click × (closes; − and □ no longer close). Type a name in the top-bar "New workspace…" field + ＋ (or Enter) → new dimension. Press `F` or dock "Fit to content" → view frames all objects. Confirm the minimap/zoom overlay are visible above the dock.
+
+**Status / next:** All bugs above fixed; build + clippy clean. Highest-leverage next step per ux-vision.md is the **Command Palette (⌘K)**, then fluid (animated) camera transitions.
+
+---
+
 ## 2026-06-03 "Let's rock" GUI Polish Iteration: More Cinematic Background, Real Window Chrome, Rich Demo Content (continuing from reference image feedback)
 
 **Context / Why this work:**
