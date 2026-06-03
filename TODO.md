@@ -24,12 +24,14 @@ Short checklist — see **[docs/PHASES.md](docs/PHASES.md)** for full phase deta
 ## Phase 2: Shell MVP
 
 - [x] Infinite zoomable canvas
-- [x] Dimension switching + create new
+- [x] Dimension switching + create new (top-bar "New workspace…" field, v0.2.0)
 - [x] Smart Objects → [smart-objects.md](docs/smart-objects.md)
 - [x] Selection + inspector panel
 - [x] Grid snap + minimap
 - [x] Persistent layout restore
-- [x] Resize Smart Objects (corner drag + inspector)
+- [x] Resize Smart Objects (corner drag + inspector; hit-test bug fixed v0.2.0)
+- [x] Command Palette ⌘K (fuzzy launcher / command spine) → [ux-vision.md](docs/ux-vision.md)
+- [x] Fit view to content (F / dock / palette)
 - [ ] Object linking across dimensions (basic nav + targets done; polish todo)
 - [ ] Native Redox orbital shell
 

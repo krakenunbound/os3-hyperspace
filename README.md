@@ -1,6 +1,6 @@
 # OS/3 Hyperspace
 
-The AI-native, multidimensional operating system. Spiritual successor to OS/2 Warp.
+**v0.2.0** · The AI-native, multidimensional operating system. Spiritual successor to OS/2 Warp.
 
 Built on [Redox OS](https://www.redox-os.org/) (Rust microkernel) for maximum stability, security, and openness.
 
@@ -8,8 +8,11 @@ Built on [Redox OS](https://www.redox-os.org/) (Rust microkernel) for maximum st
 
 - Infinite zoomable workspaces (**Dimensions**)
 - **Smart Objects** — typed entities on the canvas, not just files or windows
+- **Command Palette (⌘K)** — Spotlight-style, keyboard-complete: do anything by typing
 - **Local-first AI agents** — on-device by default
 - Better than Windows 11 / macOS in usability, robustness, and freedom
+
+Design direction — *"macOS beauty, Linux power (or better)"* — lives in **[docs/ux-vision.md](docs/ux-vision.md)**.
 
 ## Project status
 
@@ -17,7 +20,7 @@ Built on [Redox OS](https://www.redox-os.org/) (Rust microkernel) for maximum st
 |-------|-------|--------|
 | **0** | Setup + desktop prototype | ✅ Prototype running on Windows; Redox VM + forks pending |
 | **1** | Core services + Redox foundation | 🟡 JSON persistence + AI stub done; Redox / local inference pending |
-| **2** | Shell MVP | 🟡 Resize handles + basic Link navigation landed (see docs/DEVELOPMENT-LOG.md + PHASES.md); more polish + native Redox pending |
+| **2** | Shell MVP | 🟡 Command Palette (⌘K), fit-to-content, resize + basic Link nav landed; input/layout bugs fixed (see DEVELOPMENT-LOG.md); native Redox pending |
 | **3+** | Compatibility, polish, release | ⚪ Not started |
 
 Full tracker: **[docs/PHASES.md](docs/PHASES.md)**
@@ -38,9 +41,13 @@ Controls, persistence paths, and dev scripts: **[docs/dev-windows.md](docs/dev-w
 crates/
   hyperspace-core/    Dimensions, viewport math, Smart Object types
   hyperspace-shell/   Infinite-canvas UI prototype (eframe/egui)
+    app.rs            App state, panels, shortcuts, command actions
+    canvas.rs         Canvas render + input (pan/zoom/move/resize/link)
+    palette.rs        Command Palette (⌘K) — fuzzy launcher + command registry
+    theme.rs          Dark-neon "Hyperspace" theme
   hyperspace-ai/      Local agent runtime trait + stub model
   hyperspace-fs/      Object store + JSON workspace persistence
-docs/                 Phase tracker, architecture notes, concept specs
+docs/                 Phase tracker, UX vision, architecture, concept specs
 scripts/dev.ps1       run | build | check | test
 ```
 
@@ -54,6 +61,7 @@ Quick links:
 |-----|-------------|
 | [docs/README.md](docs/README.md) | Documentation index + full structure |
 | [docs/PHASES.md](docs/PHASES.md) | Phase tracker (source of truth) — status tables, exit criteria, next order |
+| [docs/ux-vision.md](docs/ux-vision.md) | UX design spine — "macOS beauty, Linux power": principles, polish checklist, roadmap |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Target vs. current layers, crate map, data flow |
 | [docs/smart-objects.md](docs/smart-objects.md) | Smart Object types, interaction, future behavior |
 | [docs/persistence.md](docs/persistence.md) | JSON schema, paths, save triggers |

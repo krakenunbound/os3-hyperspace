@@ -1443,7 +1443,7 @@ checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 
 [[package]]
 name = "hyperspace-ai"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "hyperspace-core",
  "serde",
@@ -1453,7 +1453,7 @@ dependencies = [
 
 [[package]]
 name = "hyperspace-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "thiserror 2.0.18",
@@ -1462,7 +1462,7 @@ dependencies = [
 
 [[package]]
 name = "hyperspace-fs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dirs",
  "hyperspace-core",
@@ -1476,7 +1476,7 @@ dependencies = [
 
 [[package]]
 name = "hyperspace-shell"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "eframe",
  "egui",

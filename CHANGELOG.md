@@ -9,7 +9,29 @@ See [docs/DEVELOPMENT-LOG.md](docs/DEVELOPMENT-LOG.md) for *exhaustive* session-
 
 ## [Unreleased]
 
+_Nothing yet — see the roadmap in [docs/ux-vision.md](docs/ux-vision.md) (next up: spring-animated camera + dimension cross-fades; exposing the command registry to the AI)._
+
+## [0.2.0] - 2026-06-03 (Command Palette + bug-fix & UX pass)
+
+> Headline: a **Command Palette (⌘K)** — the keyboard-complete spine of the shell — plus a
+> round of real input/layout **bug fixes** that make manipulation actually work. See
+> [docs/ux-vision.md](docs/ux-vision.md) for the design direction ("macOS beauty, Linux power").
+
 ### Added
+- **Command Palette (⌘K / Ctrl+K)** — Spotlight-style fuzzy launcher (`crates/hyperspace-shell/src/palette.rs`):
+  - Searchable registry of commands: spawn any object (at the view centre), new workspace,
+    fit view, save, toggle side panel, ask/ping the local agent, delete selection, and
+    "Go to Workspace: …" per dimension.
+  - Lightweight fuzzy matcher (word-start / consecutive-run bonuses); ↑/↓ to move (wraps),
+    ↵ to run, Esc / click-outside to dismiss; dim backdrop + centered glass card + auto-focus.
+  - Data-only `CommandAction` enum the app interprets (no callbacks fighting `&mut self`),
+    deliberately shaped so the AI can later *act* through the same registry.
+  - Discoverable via the dock's **⌘ Commands** button and the top-bar **Spawn** button.
+- **Fit view to content** (`F` key or dock button) — frames the whole active dimension
+  (`fit_viewport_to_content`, unit-tested). First step toward the planned fluid camera.
+- **Create workspaces (Dimensions) from the UI** — top-bar "New workspace…" field + ＋
+  (Enter also submits). Previously only possible in code.
+- **Resize cursors** — hovering a selected object's corner shows directional resize cursors.
 - Resize handles for all Smart Objects (corner drag on canvas + DragValue editors in Inspector). Sizes snap on release. Min size enforcement. Works across Note/App/Folder/Agent/Link.
 - Basic cross-dimension object linking via `Link` Smart Objects:
   - `link_target: Option<SmartObjectId>` field on SmartObject (persisted, optional for compat).
@@ -43,6 +65,8 @@ See [docs/DEVELOPMENT-LOG.md](docs/DEVELOPMENT-LOG.md) for *exhaustive* session-
   - Updated docs and log with full details.
 
 ### Changed
+- The Command Palette (⌘K) is now the primary way to act in the shell; scattered buttons
+  funnel into one registry. `handle_shortcuts` lets the palette own the keyboard while open.
 - Canvas input now prioritizes resize handles on selected objects before object dragging.
 - Event system extended: `CanvasEvent::Resized` and `CanvasEvent::LinkActivate`.
 - HUD controls text and Inspector updated for new interactions.
@@ -50,6 +74,10 @@ See [docs/DEVELOPMENT-LOG.md](docs/DEVELOPMENT-LOG.md) for *exhaustive* session-
 - `with_demo_content()` now wires cross-dim Link example.
 
 ### Documentation
+- New [docs/ux-vision.md](docs/ux-vision.md): the UX design spine — principles, a macOS-polish
+  checklist mapped to concrete work, and a leverage-ordered roadmap.
+- [docs/DEVELOPMENT-LOG.md](docs/DEVELOPMENT-LOG.md): two new dated entries (bug-fix pass; Command Palette).
+- [docs/dev-windows.md](docs/dev-windows.md): ⌘K / F controls + a Command Palette section.
 - Massive update per project convention (see docs/DEVELOPMENT-LOG.md:2026-06-03 entry for the full "document the hell out of it" process).
 - [docs/PHASES.md](docs/PHASES.md): Status tables, next targets, dates, notes.
 - [docs/smart-objects.md](docs/smart-objects.md): Interaction table, impl notes, Link section, header.
@@ -62,6 +90,17 @@ See [docs/DEVELOPMENT-LOG.md](docs/DEVELOPMENT-LOG.md) for *exhaustive* session-
 - Commits use verbose messages referencing the log.
 
 ### Fixed / Technical
+- **Resize handles & close button now actually work.** They were hit-tested in *global*
+  screen coords but compared against a *canvas-local* pointer, so the grab/click zones were
+  offset from the drawn handles by the panel origin (~260px×40px with the HUD shown). Now
+  hit-tested in canvas-local space (new `object_local_rect` helper).
+- **Close zone no longer swallows minimize/maximize.** The old 50px-wide control zone covered
+  all three chrome buttons; narrowed to a tight box around the × glyph only.
+- **Bottom dock no longer occludes the minimap + zoom overlay.** It was created *inside* the
+  `CentralPanel` and painted over the canvas; now declared as a sibling panel *before* it.
+- **Dock "New Note" spawns at the visible canvas centre** (`-pan`) instead of off-screen.
+- **Wired up the dead `new_dimension_name` field** → the create-workspace UI above.
+- **clippy:** trimmed excessive f32 literal precision in the starfield hash.
 - Borrow checker workarounds for dimension mutation during Link nav (pending state collector, modeled after agent prompts).
 - No breaking changes to public types or persistence format (new field is optional + defaulted).
 
@@ -86,4 +125,5 @@ See the git history (c7a0756 + dcd9950) and DEVELOPMENT-LOG for exact diffs + re
 For exhaustive details of the 2026-06-03 work, see [docs/DEVELOPMENT-LOG.md](docs/DEVELOPMENT-LOG.md).
 
 [Unreleased]: #unreleased
+[0.2.0]: #020---2026-06-03-command-palette--bug-fix--ux-pass
 [0.1.0]: #010---2026-06-03-skeleton--initial-features

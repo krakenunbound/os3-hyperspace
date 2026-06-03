@@ -2,7 +2,7 @@
 
 **Current phase:** Phase 0 (prototype running) with early Phase 2 shell features done.
 
-**Last updated:** 2026-06-03 (post resize + basic linking + visual immersion iteration for "best OS")
+**Last updated:** 2026-06-03 (v0.2.0 — Command Palette ⌘K + input/layout bug-fix & UX pass)
 
 This is the source of truth for project progress (Phases 0–4 with status tables ✅ / ⬜, exit criteria, and suggested build order). [TODO.md](../TODO.md) is a short mirror of this file. See [README.md](README.md) (in docs/) for the documentation index.
 
@@ -62,7 +62,9 @@ This is the source of truth for project progress (Phases 0–4 with status table
 | Canvas immersion & object liveness visuals | ✅ Major step + polish | Deep space theme, layered starfield + nebulae + glowing energy streaks, premium glassmorphic cards with icons/badges/shadows/glows + interactive window chrome (close button works on selected), richer demo content (terminal, about, folders), modern top bar/HUDs/dock (see DEVELOPMENT-LOG "Let's rock" entry + user reference image). Still more polish possible. |
 | Native Redox orbital shell | ⬜ Todo | Replace eframe/egui layer |
 | Object linking across dimensions | 🟡 Partial | `Link` kind + link_target + HUD spawn + Inspector picker + click-to-navigate + demo prewire + persistence. Polish (arrows, object targets, feedback) todo. See [smart-objects.md](smart-objects.md) |
-| Resize Smart Objects | ✅ Done | Drag corner handles on selection (live + snap); Inspector size DragValues; min sizes, works on all kinds incl Links |
+| Resize Smart Objects | ✅ Done | Drag corner handles on selection (live + snap); Inspector size DragValues; min sizes, works on all kinds incl Links. **Hit-testing bug fixed in 0.2.0** (was offset by panel origin); resize cursors on hover |
+| Command Palette (⌘K) | ✅ Done (0.2.0) | Spotlight-style fuzzy launcher; keyboard-complete command registry (`palette.rs`). The spine new features register into. See [ux-vision.md](ux-vision.md) §3.1 |
+| Fit view to content | ✅ Done (0.2.0) | `F` / dock / palette; centroid-frames the dimension (`fit_viewport_to_content`) |
 
 **Exit criteria:** Same UX on Redox as desktop prototype; layouts portable between both.
 
